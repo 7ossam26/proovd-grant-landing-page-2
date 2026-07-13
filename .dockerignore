@@ -1,0 +1,36 @@
+# Dependencies & build output (rebuilt inside the image)
+node_modules
+.next
+out
+
+# VCS & tooling
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# Tests & their artifacts
+e2e
+tests
+playwright.config.ts
+playwright-report
+test-results
+**/*.test.ts
+**/*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+coverage
+
+# Docs & meta (not needed to build the app)
+docs
+README.md
+DEPLOY.md
+AGENTS.md
+CLAUDE.md
+
+# Local env & logs
+.env*
+npm-debug.log*
+Dockerfile
+.dockerignore

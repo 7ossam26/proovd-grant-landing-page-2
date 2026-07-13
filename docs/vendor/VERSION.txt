@@ -1,0 +1,5 @@
+GSAP 3.15.0 — official files from the public npm package (npm pack gsap).
+Since GSAP 3.13 the whole toolkit, including SplitText and ScrambleText,
+is free for commercial use under the standard GSAP license (gsap.com/licensing).
+Files: gsap.min.js, ScrollTrigger.min.js, Flip.min.js, SplitText.min.js,
+ScrambleTextPlugin.min.js, TextPlugin.min.js
