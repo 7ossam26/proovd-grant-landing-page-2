@@ -1,0 +1,116 @@
+/* Hero — full-bleed image moment. Acts as a dark section (§1 mode-dark
+   colors) because the type sits on a photo. Responsive units only; px is
+   reserved for border width + radius via the proovd.css tokens. */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
+  padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 3.5vw, 3.5rem)
+           clamp(4.5rem, 11vw, 10rem); /* larger bottom pad biases the centered
+                                          group upward, closer to the logo */
+  background-color: var(--dark); /* holds the moment until the image paints */
+  overflow: hidden;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/Hero_desktop.png");
+  background-size: cover;
+  background-position: 35% center;
+  z-index: 0;
+}
+
+.hero > :not(.bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  height: clamp(1.375rem, 3.5vw, 5.25rem);
+  margin-top: clamp(0.75rem, 1.5vw, 2.25rem);
+  width: auto;
+  align-self: flex-start;
+}
+
+.headline {
+  /* 5.5vw = the 110px headline at a 2000px screen — same proportion of the
+     viewport at every size, so it never spreads into the photo's subject */
+  font-size: clamp(2rem, 6.2vw, 9.25rem);
+  font-weight: 900; /* Satoshi Black — the family's heaviest cut */
+  font-variation-settings: "wght" 900; /* pin the variable axis explicitly */
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  color: var(--white);
+  margin: auto 0 0; /* with .start's margin-bottom:auto, centers the group */
+  max-width: 12ch;
+}
+
+/* Figma "component-1" button, converted to responsive values:
+   27.39px type → fluid clamp; 16.1/80.6px padding → em so it scales with
+   the type; border stays px (the one legal px use). */
+/* touch: the hero is a native snap stop (see globals.css) */
+@media (hover: none) {
+  .hero {
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+}
+
+.start {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  background: var(--white);
+  color: var(--dark);
+  border: 5px solid var(--brand);
+  border-radius: var(--radius);
+  padding: 0.59em 2.94em;
+  min-height: var(--touch);
+  margin-top: clamp(2.25rem, 4.5vw, 4rem);
+  margin-bottom: auto; /* pairs with the headline's margin-top:auto */
+  font-size: clamp(0.8125rem, 1.25vw, 1.875rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-decoration: none;
+}
+
+@media (max-width: 600px) {
+  .start { border-width: 3px; }
+}
+
+/* ── Phone posture: taller hero image (face top, keyboard bottom), text
+   block sits low over the keyboard. Sizes re-derived from phone width. */
+@media (max-width: 700px) {
+  .bg {
+    background-image: url("/assets/Hero_mobile.png");
+    background-position: center top;
+  }
+
+  .hero {
+    padding: clamp(1.25rem, 5vw, 2rem) clamp(1rem, 5vw, 1.75rem)
+             clamp(2.5rem, 10vw, 4rem);
+  }
+
+  .logo {
+    height: clamp(2.375rem, 9.5vw, 3.25rem);
+    margin-top: clamp(0.5rem, 2vw, 1rem);
+  }
+
+  .headline {
+    font-size: clamp(2.5rem, 13.25vw, 3.875rem);
+    margin-bottom: 0;
+  }
+
+  .start {
+    font-size: clamp(1.0625rem, 4.5vw, 1.4rem);
+    margin-top: clamp(1.25rem, 5vw, 2rem);
+    margin-bottom: 0; /* group sits at the bottom, over the keyboard */
+  }
+}

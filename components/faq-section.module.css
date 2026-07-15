@@ -1,0 +1,98 @@
+/* Founder FAQ — one scannable column, whole-row tap targets, one answer
+   open at a time. Expansion is pure CSS (grid rows), so it's always smooth. */
+
+.section {
+  position: relative;
+  z-index: 30; /* above the pinned creators section, like its siblings */
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(4.5rem, 8vw, 8rem) clamp(1.25rem, 3.5vw, 3.5rem)
+           clamp(4.5rem, 8vw, 8rem);
+}
+
+/* touch: its top is a snap stop; being taller than the viewport, the
+   interior scrolls freely */
+@media (hover: none) {
+  .section {
+    scroll-snap-align: start;
+  }
+}
+
+.heading {
+  color: var(--dark);
+  font-weight: 900;
+  font-size: clamp(2.25rem, 4.6vw, 5.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  margin: 0 0 clamp(2rem, 4vw, 4rem);
+}
+
+.list {
+  width: min(100%, clamp(20rem, 60vw, 56rem));
+  border-bottom: 2px solid var(--brand-15);
+}
+
+.item {
+  border-top: 2px solid var(--brand-15);
+}
+
+/* the whole row is the button — nothing to aim for */
+.question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(1rem, 2vw, 2rem);
+  width: 100%;
+  min-height: var(--touch);
+  padding: clamp(1.125rem, 1.8vw, 1.75rem) 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--dark);
+  font-weight: 700;
+  font-size: clamp(1.0625rem, 1.35vw, 1.625rem);
+  line-height: 1.35;
+}
+
+.plus {
+  flex: none;
+  color: var(--brand);
+  font-weight: 900;
+  font-size: 1.35em;
+  line-height: 1;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.plusOpen {
+  transform: rotate(45deg); /* + becomes × */
+}
+
+/* pure-CSS expand: 0fr → 1fr */
+.answerWrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.answerOpen {
+  grid-template-rows: 1fr;
+}
+
+.answerInner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.answer {
+  color: var(--dark);
+  font-weight: 500;
+  font-size: clamp(1rem, 1.2vw, 1.4375rem);
+  line-height: 1.55;
+  max-width: 62ch;
+  margin: 0;
+  padding: 0 0 clamp(1.125rem, 1.8vw, 1.75rem);
+}

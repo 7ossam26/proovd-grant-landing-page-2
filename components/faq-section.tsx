@@ -1,0 +1,164 @@
+"use client";
+
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { SplitText } from "gsap/SplitText";
+import { useLayoutEffect, useRef, useState } from "react";
+import styles from "./faq-section.module.css";
+
+gsap.registerPlugin(ScrollTrigger, SplitText);
+
+const FAQS = [
+  {
+    q: "Do I get to choose my affiliates?",
+    a: "You'll see 1–5 curated matches with their audience stats. Not feeling them? You can browse the network and request others manually.",
+  },
+  {
+    q: "What do affiliates actually see about my idea?",
+    a: "Your full pitch: problem, solution, visuals, your interview. Worried about that? Apply for Teaser Mode.",
+  },
+  {
+    q: "Can I edit my campaign once it's live?",
+    a: "Freely, until the first reservation lands. After that, typos and FAQs only. Big changes mean cancel and relist.",
+  },
+  {
+    q: "Can I cancel a campaign?",
+    a: "First 2 days, no questions asked. After that, you'll need admin approval and an actual reason.",
+  },
+  {
+    q: "What counts as “progress” at the Day 14 check?",
+    a: "A demo link, repo walkthrough, beta invites. Proof you're building, reviewed by a human. “The link loads” isn't the bar.",
+  },
+  {
+    q: "Can I pivot if backers fund something else?",
+    a: "Iterate? Sure. Pivot to a different product? That's a milestone fail, a ban, and refunds. Sell what you pitched.",
+  },
+  {
+    q: "Do I get my backers' emails?",
+    a: "Only from backers who opt in at checkout. Everyone else shows up as anonymous data. Still useful, just nameless.",
+  },
+  {
+    q: "What's this “high effort” label?",
+    a: "It means you showed up with a napkin sketch. Affiliates can bid above the base commission to take it on. More polish, better rates.",
+  },
+  {
+    q: "The AI rewrote my pitch. What if it's wrong?",
+    a: "You see it side-by-side with your original and nothing ships without your explicit sign-off. Your pitch, your responsibility.",
+  },
+  {
+    q: "Sales come in organically, does the affiliate get a cut?",
+    a: "Nope. Organic and SEO sales are 100% yours (minus our 5%). Affiliates only earn on their own links.",
+  },
+  {
+    q: "Can I message affiliates directly?",
+    a: "No DMs. Updates happen on your campaign page. Need a real conversation? There's a 1-on-1 meeting request button.",
+  },
+  {
+    q: "Can I run two campaigns at once?",
+    a: "One at a time, 3-month gap between them. Quality over chaos.",
+  },
+  {
+    q: "Who's actually handling the money?",
+    a: "Stripe. You're the merchant of record, we're the software. Nobody's running a shoebox bank here.",
+  },
+  {
+    q: "Back-to-back flops, am I banned?",
+    a: "No. Failing is fine, that's literally what validation is for. Ghosting after taking money is the only unforgivable sin.",
+  },
+];
+
+export function FaqSection() {
+  const rootRef = useRef<HTMLElement>(null);
+  const [open, setOpen] = useState<number | null>(null);
+
+  // No section transition — rows just rise in one by one as they scroll
+  // into view, and the heading gets the house masked rise.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let cancelled = false;
+    const ctx = gsap.context(() => {
+      const heading = root.querySelector<HTMLElement>("[data-heading]");
+      const items = root.querySelectorAll<HTMLElement>("[data-item]");
+      if (!heading) return;
+
+      const reveal = () => {
+        if (cancelled) return;
+        try {
+          const split = SplitText.create(heading, { type: "words", mask: "words" });
+          const masks = split.words
+            .map((w) => w.parentElement)
+            .filter((p): p is HTMLElement => !!p && p !== heading);
+          gsap.set(masks, { paddingBottom: "0.18em", marginBottom: "-0.18em" });
+          gsap.from(split.words, {
+            yPercent: 130,
+            duration: 0.5,
+            ease: "power4.out",
+            stagger: 0.05,
+            onComplete: () => split.revert(),
+            scrollTrigger: { trigger: heading, start: "top 80%", once: true },
+          });
+          for (const item of items) {
+            gsap.from(item, {
+              y: 16,
+              autoAlpha: 0,
+              duration: 0.4,
+              ease: "power3.out",
+              scrollTrigger: { trigger: item, start: "top 92%", once: true },
+            });
+          }
+        } catch {
+          // Motion must never leave content hidden (§6.6).
+          gsap.set([heading, ...items], { autoAlpha: 1, y: 0 });
+        }
+      };
+
+      Promise.race([
+        document.fonts.ready,
+        new Promise((resolve) => setTimeout(resolve, 600)),
+      ]).then(reveal);
+    }, root);
+
+    return () => {
+      cancelled = true;
+      ctx.revert();
+    };
+  }, []);
+
+  return (
+    <section ref={rootRef} className={styles.section} id="faq">
+      <h2 className={styles.heading} data-heading>
+        Founder FAQ
+      </h2>
+      <div className={styles.list}>
+        {FAQS.map((f, i) => (
+          <div key={f.q} className={styles.item} data-item>
+            <button
+              type="button"
+              className={styles.question}
+              aria-expanded={open === i}
+              onClick={() => setOpen(open === i ? null : i)}
+            >
+              <span>{f.q}</span>
+              <span
+                className={`${styles.plus} ${open === i ? styles.plusOpen : ""}`}
+                aria-hidden="true"
+              >
+                +
+              </span>
+            </button>
+            <div
+              className={`${styles.answerWrap} ${open === i ? styles.answerOpen : ""}`}
+            >
+              <div className={styles.answerInner}>
+                <p className={styles.answer}>{f.a}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,100 @@
+/* Risk Free — the dark curtain that slides up over the creators section
+   (the curtain effect itself lives on the sections' stacking: creators pins,
+   this panel scrolls over it). Stickers hold the four corners. */
+
+.section {
+  position: relative;
+  z-index: 20; /* rides OVER the pinned creators section — the curtain */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: clamp(1.5rem, 3vw, 3rem);
+  background: #011E0B; /* same color as the navbar */
+  padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem);
+  overflow: hidden;
+}
+
+/* touch: a native snap stop like its siblings */
+@media (hover: none) {
+  .section {
+    scroll-snap-align: start;
+  }
+}
+
+.title {
+  color: var(--mint);
+  font-weight: 500; /* deliberately light — calm, matter-of-fact */
+  font-size: clamp(3.25rem, 9.5vw, 11rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.sub {
+  color: var(--mint);
+  font-weight: 400;
+  font-size: clamp(1.0625rem, 1.9vw, 2.25rem);
+  line-height: 1.4;
+  max-width: 34ch;
+  margin: 0;
+}
+
+/* ── corner stickers ──────────────────────────────────────────────────── */
+
+.sticker {
+  position: absolute;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+.stickerTopLeft {
+  width: clamp(8rem, 13.5vw, 16rem);
+  left: clamp(2rem, 10vw, 13rem);
+  top: 22%;
+  rotate: -4deg;
+}
+
+.stickerTopRight {
+  width: clamp(5rem, 7.5vw, 9.5rem);
+  right: clamp(2rem, 13vw, 17rem);
+  top: 34%;
+  rotate: -8deg;
+}
+
+.stickerBottomLeft {
+  width: clamp(9.5rem, 18vw, 21.5rem);
+  left: clamp(1.5rem, 5vw, 7rem);
+  bottom: 7%;
+  rotate: -10deg;
+}
+
+.stickerBottomRight {
+  width: clamp(8.5rem, 14.5vw, 17.5rem);
+  right: clamp(1.5rem, 7vw, 10rem);
+  bottom: 9%;
+  rotate: 5deg;
+}
+
+/* phone: pull the stickers in tighter so they frame, not crowd */
+@media (max-width: 700px) {
+  .stickerTopLeft {
+    top: 16%;
+  }
+
+  .stickerTopRight {
+    top: 20%;
+  }
+
+  .stickerBottomLeft {
+    width: clamp(7rem, 32vw, 9rem);
+    bottom: 10%;
+  }
+
+  .stickerBottomRight {
+    width: clamp(6rem, 28vw, 8rem);
+  }
+}

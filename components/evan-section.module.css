@@ -1,0 +1,342 @@
+/* "This is Evan" → "Has an Idea" — no-fill section on the #FAFAFA page
+   (§1 mode-none). The statement overlays the section, then hands off to the
+   detail layout via a photo flight. */
+
+.section {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem)
+           clamp(2.5rem, 5vw, 4.5rem);
+}
+
+/* ── phone scroll model ───────────────────────────────────────────────────
+   The section pins (position: sticky — native, composited) inside a wrapper
+   tall enough to give each chapter its own stretch of REAL scroll room.
+   Scrolling stays 100% native; invisible markers give every chapter a snap
+   stop, and a passive scroll listener steps the carousel. On desktop the
+   wrapper adds nothing. */
+
+.pinSpace {
+  position: relative;
+}
+
+.snapMark {
+  display: none;
+}
+
+@media (hover: none) {
+  .pinSpace {
+    --chapter-step: 55svh; /* scroll distance per chapter */
+    /* one viewport for the section + 4 extra chapters of travel */
+    height: calc(100svh + 4 * var(--chapter-step));
+  }
+
+  .section {
+    position: sticky;
+    top: 0;
+    min-height: auto;
+    height: 100svh;
+  }
+
+  .snapMark {
+    display: block;
+    position: absolute;
+    left: 0;
+    width: 1px;
+    height: var(--chapter-step);
+    pointer-events: none;
+    scroll-snap-align: start;
+    scroll-snap-stop: always; /* a fling settles one chapter at a time */
+  }
+}
+
+/* ── opening statement (overlay) ─────────────────────────────────────── */
+
+.statementWrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: inherit;
+  pointer-events: none;
+}
+
+.statement {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(1rem, 3vw, 3.5rem);
+  font-size: clamp(2.25rem, 5.7vw, 8.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--dark);
+  text-align: center;
+  margin: 0;
+}
+
+.photoMask {
+  display: block;
+  flex: none;
+  width: clamp(8rem, 15vw, 18.5rem);
+  aspect-ratio: 1;
+  overflow: hidden; /* the photo reveals from inside this mask */
+  border-radius: var(--radius);
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── segmented toggle — tab-drawer treatment (§1 darker green) ────────── */
+
+.toggle {
+  display: flex;
+  align-self: flex-start;
+  background: var(--darker);
+  border: 2px solid var(--darker);
+  border-radius: var(--radius);
+  margin-bottom: clamp(1.5rem, 3vw, 2.75rem);
+  transform: translateY(clamp(1.75rem, 3.5vw, 3.25rem));
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--white);
+  font-weight: 700;
+  font-size: clamp(0.875rem, 1.05vw, 1.25rem);
+  padding: 0.75em 1.6em;
+  min-height: var(--touch);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.tabActive {
+  background: var(--mint);
+  color: var(--darker);
+}
+
+/* ── detail layout ────────────────────────────────────────────────────── */
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.grid {
+  display: grid;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+  flex: 1;
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: 1.1fr 1fr;
+    gap: clamp(2rem, 6vw, 7rem);
+  }
+}
+
+.grid > * {
+  min-width: 0;
+}
+
+/* the frame is the card stack: the outgoing photo snapshot sits in it while
+   the incoming one slaps down on top */
+.photoFrame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 13 / 10;
+}
+
+.ideaPhoto {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+/* the outgoing title+body snapshot overlays here while the new block enters */
+.swap {
+  position: relative;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.evanRow {
+  display: flex;
+  align-items: flex-end; /* name sits on the photo's bottom edge */
+  gap: clamp(0.5rem, 0.9vw, 1.125rem);
+  margin-top: clamp(1rem, 2vw, 2rem);
+  margin-bottom: clamp(1.5rem, 3vw, 3rem);
+}
+
+.thumb {
+  width: clamp(3rem, 4.2vw, 5.25rem);
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius);
+}
+
+.evanName {
+  font-size: clamp(1.25rem, 2vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.1; /* keeps the baseline close to the photo's bottom edge */
+  color: var(--dark);
+}
+
+/* Per-slide fonts shrink (--title-scale / --body-scale) so longer copy fits
+   the SAME footprint as slide one — the block never grows and pushes the
+   layout around. min-heights reserve that footprint for shorter slides too. */
+
+.ideaTitle {
+  --title-size: clamp(2.75rem, 5.8vw, 8.75rem);
+  font-size: calc(var(--title-size) * var(--title-scale, 1));
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--darker); /* #012D10 */
+  margin: 0 0 clamp(1.5rem, 2.8vw, 3rem);
+}
+
+.ideaBody {
+  --body-size: clamp(1rem, 1.35vw, 1.625rem);
+  font-size: calc(var(--body-size) * var(--body-scale, 1));
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--dark);
+  max-width: min(100%, clamp(22rem, 36vw, 40rem));
+  margin: 0;
+}
+
+/* chapter progress — a full-bleed bar hugging the very bottom edge */
+.progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(0.5rem, 0.8vw, 0.875rem);
+  background: var(--mint);
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── sticker cursor (mouse devices only) ─────────────────────────────── */
+
+/* while the sticker is shown the real pointer disappears everywhere in the
+   section, children included; over controls (toggle tabs etc.) the sticker
+   hides, the class comes off, and the normal pointer returns */
+.cursorOn,
+.cursorOn * {
+  cursor: none !important;
+}
+
+.tab {
+  cursor: pointer;
+}
+
+.cursor {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 800; /* over the slides, under the navbar */
+  pointer-events: none;
+  opacity: 0; /* gsap autoAlpha owns visibility from here */
+  visibility: hidden;
+}
+
+/* same clothes as the hero's Start button: white face, brand border */
+.cursorBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(3.5rem, 4.2vw, 5.25rem);
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--white);
+  color: var(--dark);
+  border: 3px solid var(--brand);
+  transform: rotate(-8deg); /* a little peel-off tilt */
+}
+
+.cursorArrow {
+  width: 45%;
+  height: 45%;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .cursor {
+    display: none;
+  }
+}
+
+/* ── phone ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  /* statement: same one-line composition as desktop, scaled to fit */
+  .statement {
+    flex-wrap: nowrap;
+    font-size: clamp(1.75rem, 8.25vw, 2.375rem);
+    gap: clamp(0.5rem, 2.5vw, 0.875rem);
+  }
+
+  .photoMask {
+    width: clamp(6rem, 30vw, 8.75rem);
+  }
+
+  /* toggle spans the full width at the top, no drop-down offset */
+  .toggle {
+    align-self: stretch;
+    transform: none;
+    margin-bottom: clamp(2rem, 8vw, 3rem);
+  }
+
+  .tab {
+    flex: 1;
+    font-size: clamp(0.8125rem, 3.5vw, 1rem);
+  }
+
+  .photoFrame {
+    aspect-ratio: 11 / 10; /* a touch taller than the desktop 13/10 crop */
+  }
+
+  .evanRow {
+    margin-bottom: clamp(1rem, 4vw, 1.5rem);
+  }
+
+  .thumb {
+    width: clamp(2.25rem, 10.5vw, 3rem);
+  }
+
+  .evanName {
+    font-size: clamp(1rem, 4.75vw, 1.375rem);
+  }
+
+
+  .ideaTitle {
+    --title-size: clamp(2.25rem, 11vw, 3.25rem);
+  }
+
+  .ideaBody {
+    --body-size: clamp(1rem, 4.5vw, 1.25rem);
+  }
+}

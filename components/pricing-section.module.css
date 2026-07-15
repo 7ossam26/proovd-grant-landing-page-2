@@ -1,0 +1,186 @@
+/* Proovd pricing — back on the light page ground: one chunky brand-border
+   card (the hero button's clothes), struck beta pricing, the includes list. */
+
+.section {
+  position: relative;
+  z-index: 30; /* above the pinned creators section, like its siblings */
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--white);
+  padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem)
+           clamp(2.5rem, 5vw, 4.5rem);
+}
+
+/* touch: a native snap stop like its siblings */
+@media (hover: none) {
+  .section {
+    scroll-snap-align: start;
+  }
+}
+
+.heading {
+  color: var(--dark);
+  font-weight: 900;
+  font-size: clamp(2.25rem, 4.6vw, 5.5rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  margin: 0 0 clamp(2rem, 4vw, 4rem);
+}
+
+/* ── the card ─────────────────────────────────────────────────────────── */
+
+.card {
+  position: relative; /* the $$$ sticker hangs off this */
+  background: var(--white);
+  border: 5px solid var(--brand);
+  border-radius: var(--radius);
+  width: min(100%, clamp(21rem, 54vw, 54rem));
+}
+
+@media (max-width: 600px) {
+  .card {
+    border-width: 3px;
+  }
+}
+
+/* $$$ sticker slapped over the top-right corner */
+.money {
+  position: absolute;
+  top: clamp(-2.75rem, -3.2vw, -2rem);
+  right: clamp(-2rem, -2.4vw, -1.25rem);
+  width: clamp(4.5rem, 7vw, 8.5rem);
+  height: auto;
+  rotate: 12deg;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+
+/* dark drawer header — same treatment as the mode toggle */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+  flex-wrap: wrap;
+  background: var(--darker);
+  padding: clamp(0.875rem, 1.6vw, 1.625rem) clamp(1.25rem, 2.4vw, 2.5rem);
+  /* tuck under the card's rounded corners (overflow stays visible for the
+     sticker overhang) */
+  border-radius: calc(var(--radius) - 3px) calc(var(--radius) - 3px) 0 0;
+}
+
+.plan {
+  color: var(--mint);
+  font-weight: 800;
+  font-size: clamp(1.25rem, 1.85vw, 2.125rem);
+  margin: 0;
+}
+
+/* the tag: square corners, slapped on slightly crooked */
+.beta {
+  background: var(--brand);
+  color: var(--darker);
+  font-weight: 800;
+  font-size: clamp(0.8125rem, 1vw, 1.125rem);
+  padding: 0.4em 0.9em;
+  border-radius: 3px;
+  rotate: -3deg;
+}
+
+.cardBody {
+  padding: clamp(1.5rem, 2.6vw, 2.75rem) clamp(1.25rem, 2.4vw, 2.5rem)
+           clamp(1.5rem, 2.4vw, 2.5rem);
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: clamp(0.75rem, 1.4vw, 1.5rem);
+  flex-wrap: wrap;
+  margin: 0 0 clamp(1.25rem, 2.2vw, 2.25rem);
+}
+
+.oldPrice {
+  color: color-mix(in srgb, var(--dark) 40%, var(--white));
+  font-weight: 700;
+  font-size: clamp(1.5rem, 2.4vw, 2.75rem);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.09em;
+}
+
+.price {
+  color: var(--dark);
+  font-weight: 900;
+  font-size: clamp(3.5rem, 6.4vw, 7rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.divider {
+  border-top: 2px solid var(--brand-15);
+  margin: 0 0 clamp(1.25rem, 2.2vw, 2.25rem);
+}
+
+/* ── includes ─────────────────────────────────────────────────────────── */
+
+.includesLabel {
+  color: var(--dark);
+  font-weight: 800;
+  font-size: clamp(1rem, 1.3vw, 1.5rem);
+  margin: 0 0 clamp(0.75rem, 1.2vw, 1.25rem);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.625rem, 1vw, 1rem);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.625rem, 1vw, 1.125rem);
+  color: var(--dark);
+  font-weight: 500;
+  font-size: clamp(1.0625rem, 1.45vw, 1.75rem);
+  line-height: 1.4;
+}
+
+/* little brand tiles instead of bare glyphs */
+.check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  aspect-ratio: 1;
+  background: var(--brand);
+  color: var(--darker);
+  font-weight: 900;
+  font-size: 0.8em;
+  border-radius: 3px;
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: clamp(1.5rem, 2.6vw, 2.75rem);
+  background: var(--brand);
+  color: var(--white);
+  font-weight: 800;
+  font-size: clamp(1.125rem, 1.55vw, 1.875rem);
+  padding: 0.85em 1.5em;
+  min-height: var(--touch);
+  border-radius: var(--radius);
+  text-decoration: none;
+}

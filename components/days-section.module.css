@@ -1,0 +1,106 @@
+/* 14 days — full-bleed calendar photo revealed through the Evan mask,
+   copy on the left. Sits after the Risk curtain on the same dark ground. */
+
+.section {
+  position: relative;
+  z-index: 30; /* above the pinned creators section AND the Risk curtain */
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  background: #011E0B; /* continuous with the Risk panel until the reveal */
+  overflow: hidden;
+}
+
+/* touch: a native snap stop like its siblings */
+@media (hover: none) {
+  .section {
+    scroll-snap-align: start;
+  }
+}
+
+/* the expanding window (clip-path animated by gsap) */
+.mask {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.bg {
+  position: absolute;
+  inset: 0;
+  background: url("/assets/background-calendar-desktop.png") center / cover
+    no-repeat;
+}
+
+@media (max-width: 700px) {
+  .bg {
+    background-image: url("/assets/background-calendar-mobile.png");
+  }
+}
+
+/* ── copy ─────────────────────────────────────────────────────────────── */
+
+.copy {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 clamp(1.25rem, 5vw, 6rem);
+}
+
+.title {
+  color: var(--white);
+  font-weight: 500; /* calm, matter-of-fact — like the Risk headline */
+  font-size: clamp(3.5rem, 10.5vw, 12.5rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  margin: 0 0 clamp(1.25rem, 3vw, 3.25rem);
+}
+
+.sub {
+  color: var(--white);
+  font-weight: 500;
+  font-size: clamp(1.0625rem, 1.7vw, 2rem);
+  line-height: 1.5;
+  max-width: 30ch;
+  margin: 0 0 clamp(1.75rem, 3.5vw, 3.75rem);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dark);
+  color: var(--brand);
+  border: 2px solid var(--brand);
+  border-radius: var(--radius);
+  font-weight: 800;
+  font-size: clamp(1rem, 1.4vw, 1.75rem);
+  padding: 0.8em 1.7em;
+  min-height: var(--touch);
+  text-decoration: none;
+}
+
+/* phone: copy anchors toward the top so the calendar hands stay visible */
+@media (max-width: 700px) {
+  .section {
+    align-items: flex-start;
+  }
+
+  .copy {
+    padding-top: clamp(6.5rem, 26vw, 9rem);
+  }
+
+  .title {
+    font-size: clamp(4rem, 19vw, 5.5rem);
+  }
+
+  .sub {
+    font-size: clamp(1.25rem, 5.5vw, 1.625rem);
+  }
+
+  .cta {
+    font-size: clamp(1.125rem, 5vw, 1.4rem);
+  }
+}

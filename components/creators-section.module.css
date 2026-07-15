@@ -1,0 +1,223 @@
+/* Creators wheel — cards orbit a circle centered off-screen left; the card
+   at the focal point widens into the stat panel. Copy sits right on desktop,
+   above the wheel on phone. No fills, no shadows — cards on the page white. */
+
+.section {
+  position: relative;
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: center;
+  overflow: hidden; /* orbiting cards must never widen the page */
+  padding: clamp(5.5rem, 9vw, 8.5rem) 0 0;
+}
+
+@media (min-width: 900px) {
+  .section {
+    grid-template-columns: 1.05fr 1fr;
+    padding: 0;
+    /* curtain base: this section pins while the next one scrolls over it */
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+}
+
+/* touch: a valid native snap stop after the pinned chapters */
+@media (hover: none) {
+  .section {
+    scroll-snap-align: start;
+  }
+}
+
+/* ── copy ─────────────────────────────────────────────────────────────── */
+
+.copy {
+  position: relative;
+  z-index: 10; /* always above stray wheel cards */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0 clamp(1.25rem, 3.5vw, 3.5rem);
+}
+
+@media (min-width: 900px) {
+  .copy {
+    grid-column: 2;
+    grid-row: 1;
+    padding-right: clamp(2rem, 6vw, 7rem);
+  }
+}
+
+.eyebrow {
+  color: var(--brand);
+  font-weight: 700;
+  font-size: clamp(1rem, 1.45vw, 1.75rem);
+  margin: 0 0 clamp(1rem, 1.8vw, 2rem);
+}
+
+.heading {
+  color: var(--dark);
+  font-weight: 800;
+  font-size: clamp(1.75rem, 3.1vw, 3.75rem);
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  max-width: 24ch;
+  margin: 0 0 clamp(2rem, 3.2vw, 3.5rem);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand);
+  color: var(--white);
+  font-weight: 800;
+  font-size: clamp(1rem, 1.35vw, 1.625rem);
+  padding: 0.85em 1.6em;
+  min-height: var(--touch);
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+/* ── the wheel ────────────────────────────────────────────────────────── */
+
+.wheel {
+  position: relative;
+  height: clamp(28rem, 64svh, 44rem);
+  margin-top: clamp(2rem, 6vw, 3.5rem);
+  overflow: hidden; /* phone: cards stay inside the wheel, never over the copy */
+}
+
+@media (min-width: 900px) {
+  .wheel {
+    grid-column: 1;
+    grid-row: 1;
+    height: 100svh;
+    margin-top: 0;
+    overflow: visible; /* desktop: the section's own clip is enough */
+  }
+}
+
+.card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--white);
+  visibility: hidden; /* the ticker places it, then shows it */
+  will-change: transform, width;
+}
+
+.photo {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* compact face — niche strip along the bottom */
+.strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+  padding: 0.6em 0.9em;
+  font-size: clamp(0.7rem, 0.85vw, 1.0625rem);
+}
+
+.stripLabel {
+  font-weight: 500;
+}
+
+.stripNiche {
+  font-weight: 800;
+}
+
+/* focal face — opaque, parked past the right edge (the card's overflow
+   hides it); the ticker slides it in as the card unfolds */
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(0.75rem, 1.3vw, 1.625rem);
+  font-size: clamp(0.75rem, 0.95vw, 1.1875rem);
+  transform: translateX(102%);
+}
+
+.handle {
+  align-self: flex-end;
+  font-weight: 600;
+}
+
+.statRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.logo {
+  height: clamp(2rem, 2.9vw, 3.625rem);
+  width: auto;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.followers {
+  font-weight: 800;
+  font-size: clamp(1.75rem, 2.6vw, 3.25rem);
+  line-height: 1;
+}
+
+.followersLabel {
+  font-weight: 500;
+}
+
+.nicheRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.nicheRow .stripNiche {
+  font-size: 1.35em;
+}
+
+/* ── white → 0 washes at the edges ────────────────────────────────────── */
+
+.fadeTop,
+.fadeBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24%;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.fadeTop {
+  top: 0;
+  background: linear-gradient(to bottom, var(--white), rgba(250, 250, 250, 0));
+}
+
+.fadeBottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--white), rgba(250, 250, 250, 0));
+}

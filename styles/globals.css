@@ -1,0 +1,42 @@
+/* Page-level overrides that don't belong to the design-system file
+   (styles/proovd.css is never edited — see styles/README.md). */
+
+/* Hide scrollbars everywhere while keeping the page scrollable. */
+html {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+/* Touch devices: the hero ↔ section handoff is native CSS scroll-snap —
+   browser-composited and buttery. JS scroll tweens fighting touch momentum
+   is what felt laggy; on desktop the wheel hijack still owns the glide. */
+@media (hover: none) {
+  html {
+    scroll-snap-type: y mandatory;
+  }
+}
+
+/* Kit hover recipes (bound by components/hover-fx.tsx, from proovd-motion.js).
+   The fill/underline are gradients sized by a CSS var that GSAP tweens;
+   doubled attribute selectors outrank the buttons' own module classes. */
+[data-hover="sweep"][data-hover] {
+  --sweep: 0;
+  background-image: linear-gradient(var(--brand), var(--brand));
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: calc(var(--sweep) * 100%) 100%;
+}
+
+[data-hover="underline"][data-hover] {
+  --u: 0;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: left calc(100% - 0.05em);
+  background-size: calc(var(--u) * 100%) 0.125rem;
+  padding-bottom: 0.2em;
+}

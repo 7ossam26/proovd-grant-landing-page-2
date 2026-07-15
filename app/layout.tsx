@@ -8,6 +8,8 @@ import satoshiVariable from "@/styles/fonts/Satoshi-Variable.woff2";
 // Global design-system stylesheet (tokens, section modes, element identity,
 // and the self-hosted Satoshi @font-face). Source of truth — never edited here.
 import "@/styles/proovd.css";
+// Page-level overrides (e.g. hidden scrollbars) — kept out of proovd.css.
+import "@/styles/globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
