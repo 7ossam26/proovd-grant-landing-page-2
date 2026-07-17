@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
+import { siteConfig } from "@/lib/site-config";
 import { glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./days-section.module.css";
 
@@ -120,7 +121,7 @@ export function DaysSection() {
         </p>
         <a
           className={styles.cta}
-          href="#start"
+          href={siteConfig.founderUrl}
           data-cta
           data-hover="primary"
         >

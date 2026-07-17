@@ -1,0 +1,43 @@
+# Proovd
+
+> Proovd is a pre-order validation platform for founders. Describe your idea, get matched with vetted creators who pitch it to their audience, and let real backers pre-order before you build — so you only build what people will pay for.
+
+- Canonical URL: https://proovd.co/
+- App: https://app.proovd.co
+
+## What Proovd does
+- Turns a messy explanation or voice note into a campaign page people can back.
+- Matches you with 1–5 vetted creators in your niche who pitch your idea to their audience.
+- Lets interested people reserve or pre-order: cards are saved at reservation and charged only when the campaign hits its trigger (the pre-order goal, or the close date).
+- If the campaign misses its goal, backers pay nothing and you keep the signal: the clicks, drop-offs, and survey answers.
+- Validation takes about 14 days instead of months and thousands of dollars.
+
+## Who it's for
+- US-based founders, 18+, selling digital products: apps, software, courses, and creator tools.
+- No physical products and no regulated categories (for example finance or medical) for now.
+- You do not need an existing audience — the matched creator brings theirs.
+
+## Pricing
+- Full Founder Campaign: a $25 listing fee for the first 50 founders (normally $95), plus 5% of what you raise. Raise nothing, owe nothing.
+- Includes: pitch refinement, 1–5 vetted creators matched to your niche, a campaign page built and hosted for you, reserve-now/charge-later checkout via Stripe, tracked affiliate links with fraud protection, live analytics plus backers' survey answers, and opt-in backer emails you can export.
+
+## How creators are paid
+- Creators earn commission on the sales their link drives: 30% base, more for high-effort pitches or bonus milestones you set. It comes out of what you raise, not your pocket.
+- Organic and SEO sales are 100% yours (minus the 5% platform fee); affiliates only earn on their own links.
+
+## Founder payouts
+- 40% is releasable three days after close, once admin confirms no red flags.
+- The remaining 60% releases after a Day-14 progress check (a demo link, repo walkthrough, or beta invites — reviewed by a human).
+- Stripe handles the money; the founder is the merchant of record.
+
+## Risk guarantees
+- No creators in your niche yet: full refund, and you're first in line when they join.
+- Matched but nobody opts in within 72 hours: refunded everything above the $25 platform fee.
+- Idea campaign misses its goal: backers pay nothing, and the clicks, drop-offs, and survey answers are yours to keep.
+
+## Key links
+- Homepage: https://proovd.co/
+- Pricing: https://proovd.co/#pricing
+- Founder FAQ: https://proovd.co/#faq
+- Founder sign-in: https://app.proovd.co/login
+- Creator / affiliate sign-in: https://app.proovd.co/affiliate/login

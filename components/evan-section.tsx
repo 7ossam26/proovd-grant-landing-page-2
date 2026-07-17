@@ -901,6 +901,10 @@ export function EvanSection() {
               className={styles.ideaPhoto}
               src={slides[slide].img}
               alt={slides[slide].alt}
+              width={906}
+              height={696}
+              decoding="async"
+              loading="lazy"
               data-idea-photo
             />
           </div>
@@ -910,6 +914,10 @@ export function EvanSection() {
                 className={styles.thumb}
                 src="/assets/Evan_main_smiling.webp"
                 alt="Evan"
+                width={1063}
+                height={1153}
+                decoding="async"
+                loading="lazy"
                 data-thumb
               />
               <span className={styles.evanName} data-evan-name>
@@ -976,6 +984,10 @@ export function EvanSection() {
               className={styles.photo}
               src="/assets/Evan_main.webp"
               alt="Evan"
+              width={1063}
+              height={1153}
+              decoding="async"
+              loading="lazy"
               data-photo
             />
           </span>

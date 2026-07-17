@@ -10,10 +10,10 @@ import styles from "./risk-section.module.css";
 gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const STICKERS = [
-  { img: "/assets/sticker-1.webp", alt: "Shield sticker", cls: "stickerTopLeft" },
-  { img: "/assets/sticker-4.webp", alt: "$$$ sticker", cls: "stickerTopRight" },
-  { img: "/assets/sticker-3.webp", alt: "You're covered umbrella sticker", cls: "stickerBottomLeft" },
-  { img: "/assets/sticker-2.webp", alt: "No risk sticker", cls: "stickerBottomRight" },
+  { img: "/assets/sticker-1.webp", alt: "Shield sticker", cls: "stickerTopLeft", w: 285, h: 285 },
+  { img: "/assets/sticker-4.webp", alt: "$$$ sticker", cls: "stickerTopRight", w: 145, h: 145 },
+  { img: "/assets/sticker-3.webp", alt: "You're covered umbrella sticker", cls: "stickerBottomLeft", w: 335, h: 297 },
+  { img: "/assets/sticker-2.webp", alt: "No risk sticker", cls: "stickerBottomRight", w: 288, h: 288 },
 ] as const;
 
 // the guarantee stack — one line per way it can go sideways
@@ -214,6 +214,10 @@ export function RiskSection() {
           className={`${styles.sticker} ${styles[s.cls]}`}
           src={s.img}
           alt={s.alt}
+          width={s.w}
+          height={s.h}
+          decoding="async"
+          loading="lazy"
           data-sticker
         />
       ))}

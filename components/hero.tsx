@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
+import { siteConfig } from "@/lib/site-config";
 import { glideBusy, glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./hero.module.css";
 
@@ -145,12 +146,21 @@ export function Hero() {
         className={styles.logo}
         src="/assets/Proovd Logo.webp"
         alt="Proovd"
+        width={909}
+        height={274}
+        decoding="async"
+        fetchPriority="high"
         data-hero-logo
       />
       <h1 className={styles.headline} data-headline>
         Don’t go grey building the wrong thing.
       </h1>
-      <a href="#start" className={styles.start} data-cta data-hover="primary">
+      <a
+        href={siteConfig.founderUrl}
+        className={styles.start}
+        data-cta
+        data-hover="primary"
+      >
         Start
       </a>
     </section>

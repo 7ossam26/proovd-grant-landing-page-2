@@ -3,6 +3,7 @@
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLayoutEffect, useRef } from "react";
+import { siteConfig } from "@/lib/site-config";
 import { glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./creators-section.module.css";
 
@@ -267,7 +268,11 @@ export function CreatorsSection() {
           Our creators pitch your idea to their followers and make commission
           when you earn
         </h2>
-        <a className={styles.cta} href="#start" data-hover="primary">
+        <a
+          className={styles.cta}
+          href={siteConfig.founderUrl}
+          data-hover="primary"
+        >
           Start Campaign
         </a>
       </div>
@@ -279,6 +284,10 @@ export function CreatorsSection() {
               className={styles.photo}
               src={c.img}
               alt={`${c.niche} creator ${c.handle}`}
+              width={454}
+              height={470}
+              decoding="async"
+              loading="lazy"
               data-photo
             />
             {/* compact face: niche strip along the bottom */}
