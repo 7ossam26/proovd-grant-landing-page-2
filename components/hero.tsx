@@ -1,13 +1,13 @@
 "use client";
 
 import gsap from "gsap";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
+import { glideBusy, glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./hero.module.css";
 
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const MOTION = {
   dur: { base: 0.35, headline: 0.65 },
@@ -25,7 +25,6 @@ export function Hero() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let cancelled = false;
-    const blockInput = (e: Event) => e.preventDefault();
     const cleanupFns: Array<() => void> = [];
     const ctx = gsap.context(() => {
       const headline = root.querySelector<HTMLElement>("[data-headline]");
@@ -74,52 +73,31 @@ export function Hero() {
       };
 
       // Commit the scroll the moment 15% of the hero is crossed — no waiting
-      // for the scroll to settle (snap's built-in delay felt laggy). One
-      // smooth, certain glide; a flag stops it re-triggering itself.
-      let committing = false;
-      // Hold wheel/touch input during the glide — live scroll deltas fighting
-      // the tween frame-by-frame is what caused the judder.
-      const holdInput = () => {
-        window.addEventListener("wheel", blockInput, { passive: false });
-        window.addEventListener("touchmove", blockInput, { passive: false });
-      };
-      const releaseInput = () => {
-        window.removeEventListener("wheel", blockInput);
-        window.removeEventListener("touchmove", blockInput);
-        committing = false;
-      };
-      const commit = (to: number) => {
-        committing = true;
-        holdInput();
+      // for the scroll to settle (snap's built-in delay felt laggy). The
+      // glide itself (input hold + landing settle) lives in the shared
+      // scroll-glide module, so its tail can't trip the other helpers.
+      const commit = (to: number, dir: 1 | -1) => {
         // Announce the glide home immediately so the navbar can exit in sync
         // instead of waiting for the scroll position to cross a line.
         if (to === 0) window.dispatchEvent(new CustomEvent("proovd:home"));
-        gsap.to(window, {
-          scrollTo: { y: to, autoKill: false },
-          duration: 0.4,
-          ease: "power2.inOut",
-          overwrite: "auto",
-          onComplete: releaseInput,
-          onInterrupt: releaseInput,
-        });
+        glideTo(to, dir);
       };
 
       // Wheel is hijacked at the source: preventing the FIRST tick stops the
       // browser from starting its own smooth-scroll animation (a long fling
       // used to queue deltas that then fought the glide frame-by-frame).
       const onWheel = (e: WheelEvent) => {
-        if (committing) {
-          e.preventDefault();
-          return;
-        }
+        if (glideGate(e)) return; // glide in flight, or a landing's tail
         const y = window.scrollY;
         const heroH = root.offsetHeight;
+        // in-region ticks are HELD and the glide commits on accumulated
+        // intent — tiny trackpad deltas add up instead of drifting natively
         if (e.deltaY > 0 && y < heroH - 2) {
           e.preventDefault();
-          commit(heroH);
+          if (intentTick(e)) commit(heroH, 1);
         } else if (e.deltaY < 0 && y > 0 && y <= heroH + 2) {
           e.preventDefault();
-          commit(0);
+          if (intentTick(e)) commit(0, -1);
         }
       };
       window.addEventListener("wheel", onWheel, { passive: false });
@@ -134,11 +112,11 @@ export function Hero() {
           start: "top top",
           end: "bottom top",
           onUpdate: (self) => {
-            if (committing) return;
+            if (glideBusy()) return;
             if (self.direction > 0 && self.progress > 0.15 && self.progress < 0.98) {
-              commit(self.end);
+              commit(self.end, 1);
             } else if (self.direction < 0 && self.progress < 0.85 && self.progress > 0.02) {
-              commit(self.start);
+              commit(self.start, -1);
             }
           },
         });
@@ -155,8 +133,6 @@ export function Hero() {
 
     return () => {
       cancelled = true;
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
       for (const fn of cleanupFns) fn();
       ctx.revert();
     };
@@ -174,7 +150,7 @@ export function Hero() {
       <h1 className={styles.headline} data-headline>
         Don’t go grey building the wrong thing.
       </h1>
-      <a href="#start" className={styles.start} data-cta data-hover="sweep">
+      <a href="#start" className={styles.start} data-cta data-hover="primary">
         Start
       </a>
     </section>

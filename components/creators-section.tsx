@@ -1,12 +1,12 @@
 "use client";
 
 import gsap from "gsap";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLayoutEffect, useRef } from "react";
+import { glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./creators-section.module.css";
 
-gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+gsap.registerPlugin(ScrollTrigger);
 
 type Platform = "tiktok" | "youtube" | "instagram";
 
@@ -129,7 +129,7 @@ export function CreatorsSection() {
       const phone = W < 700;
       cardH = H * (phone ? 0.3 : 0.3);
       compW = cardH * 0.82;
-      const focalX = W * (phone ? 0.18 : 0.3); // where the unfold anchors
+      const focalX = W * (phone ? 0.18 : 0.28); // where the unfold anchors
       // never let the unfolded card run past the right edge (left-anchored);
       // phone unfolds a touch wider so the panel text can breathe
       wideW = Math.min(
@@ -227,37 +227,8 @@ export function CreatorsSection() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    let committing = false;
-    let wasIn = false;
-    let tailAt = 0;
-    const blockInput = (e: Event) => e.preventDefault();
-    const holdInput = () => {
-      window.addEventListener("wheel", blockInput, { passive: false });
-      window.addEventListener("touchmove", blockInput, { passive: false });
-    };
-    const releaseInput = () => {
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
-      committing = false;
-    };
-    const commit = (to: number) => {
-      committing = true;
-      holdInput();
-      gsap.to(window, {
-        scrollTo: { y: to, autoKill: false },
-        duration: 0.4,
-        ease: "power2.inOut",
-        overwrite: "auto",
-        onComplete: releaseInput,
-        onInterrupt: releaseInput,
-      });
-    };
-
     const onWheel = (e: WheelEvent) => {
-      if (committing) {
-        e.preventDefault();
-        return;
-      }
+      if (glideGate(e)) return; // glide in flight, or a landing's tail
       const H = root.offsetHeight;
       // this section is sticky, so its own offsetTop follows the viewport
       // once stuck — anchor to the (non-sticky) neighbors instead
@@ -266,37 +237,26 @@ export function CreatorsSection() {
       if (!next) return;
       const top = next.offsetTop - H;
       const y = window.scrollY;
-      if (y < top - 2) {
-        wasIn = false;
-        return; // still above this section — not ours to steer
-      }
-      const now = performance.now();
-      if (!wasIn) {
-        wasIn = true;
-        tailAt = now; // just arrived — the carry fling settles first
-      }
+      if (y < top - 2) return; // still above this section — not ours to steer
+      // in-region ticks are HELD and the glide commits on accumulated
+      // intent — tiny trackpad deltas add up instead of drifting natively
       if (e.deltaY > 0 && y < top + H - 2) {
         e.preventDefault();
-        if (now - tailAt < 160) {
-          tailAt = now; // arrival momentum — hold the page still instead
-          return;
-        }
-        commit(top + H); // pull the curtain over
+        if (intentTick(e)) glideTo(top + H, 1); // pull the curtain over
       } else if (e.deltaY < 0 && y > top + 2 && y <= top + H + 2) {
         e.preventDefault();
-        commit(top); // pull it back open
-      } else if (e.deltaY < 0 && y >= top - 2 && prev) {
+        if (intentTick(e)) glideTo(top, -1); // pull it back open
+      } else if (e.deltaY < 0 && y >= top - 2 && y <= top + 2 && prev) {
+        // parked exactly at this section's stop — NOT anywhere below it
+        // (unbounded, this caught up-ticks all the way down in the FAQ and
+        // glided them straight to Evan)
         e.preventDefault();
-        commit(prev.offsetTop); // glide on up to the section above
+        if (intentTick(e)) glideTo(prev.offsetTop, -1); // up to the section above
       }
     };
 
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
-    };
+    return () => window.removeEventListener("wheel", onWheel);
   }, []);
 
   return (

@@ -184,3 +184,12 @@
   border-radius: var(--radius);
   text-decoration: none;
 }
+
+/* fine print under the CTA — quiet, but part of the deal */
+.fine {
+  color: color-mix(in srgb, var(--dark) 55%, var(--white));
+  font-weight: 500;
+  font-size: clamp(0.8125rem, 1vw, 1.125rem);
+  text-align: center;
+  margin: clamp(0.625rem, 1vw, 1rem) 0 0;
+}

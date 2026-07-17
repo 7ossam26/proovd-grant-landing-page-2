@@ -143,6 +143,22 @@
   .grid {
     grid-template-columns: 1.1fr 1fr;
     gap: clamp(2rem, 6vw, 7rem);
+    /* bias the whole moment upward a touch */
+    margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
+  }
+
+  /* the flow layout only (statement + phone untouched): photo a step
+     smaller, titles a step quieter, body copy a step larger */
+  .photoFrame {
+    width: 90%;
+  }
+
+  .ideaTitle {
+    --title-size: clamp(2.5rem, 5.2vw, 7.75rem);
+  }
+
+  .ideaBody {
+    --body-size: 1.5rem; /* 24px flat on laptop */
   }
 }
 

@@ -2,13 +2,13 @@
 
 import gsap from "gsap";
 import { Flip } from "gsap/Flip";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef, useState } from "react";
+import { glideBusy, glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./evan-section.module.css";
 
-gsap.registerPlugin(Flip, ScrollToPlugin, ScrollTrigger, SplitText);
+gsap.registerPlugin(Flip, ScrollTrigger, SplitText);
 
 // titleScale / bodyScale shrink longer copy so every slide fits the same
 // footprint as the first one — the text block must never grow and push the
@@ -20,25 +20,25 @@ const SLIDES = [
     title: "has an Idea",
     titleScale: 1,
     body:
-      "It's the thing he thinks about on the walk home. It lives in a half finished Notion doc, a 2 am voice memo, or a sticky note.",
+      "It lives in a half-finished Notion doc and a 2 am voice memo. One question he can’t shake: would anyone actually pay for it?",
     bodyScale: 1,
   },
   {
     img: "/assets/saying_his_idea_evan.webp",
     alt: "Evan saying his idea out loud",
-    title: "says his idea out loud",
+    title: "speaks it out loud",
     titleScale: 0.75,
     body:
-      "Today he says it out loud: the problem, and the way he'd fix it. Just like he would explain it to Molly on facetime.",
+      "He tells Proovd the problem and his fix. As if he’s talking to a friend, Proovd turns it from a messy train of thought into a campaign page people can back.",
     bodyScale: 1,
   },
   {
     img: "/assets/Campaign_Evan.webp",
     alt: "Evan matched with a creator",
-    title: "gets matched with a creator",
+    title: "gets matched",
     titleScale: 0.75,
     body:
-      "Proovd pairs him with a YouTuber with 80K subs in his niche. The part Evan dreads most, getting strangers to care, just became someone else's job.",
+      "Proovd pairs him with a vetted YouTuber: 80K subs, exactly his niche. Getting strangers to care just became someone else’s job.",
     bodyScale: 1,
   },
   {
@@ -47,16 +47,16 @@ const SLIDES = [
     title: "Campaign goes live",
     titleScale: 0.75,
     body:
-      "The creator hits post, and Evan's idea is suddenly in front of 80,000 people, not after 6 months of building, but today, while it's still just an idea.",
+      "The creator hits post and 80,000 people see it while it’s still just an idea. The ones who want it reserve theirs. Their card gets saved, not charged yet.",
     bodyScale: 1,
   },
   {
     img: "/assets/Money_Evan.webp",
     alt: "The campaign making money",
-    title: "Campaign makes money",
+    title: "has users",
     titleScale: 0.75,
     body:
-      "now he know's people want his Idea and he has the money and the customer base to make that happen",
+      "The campaign hits its pre-order goal. Saved cards get charged, and Evan starts building with money in the bank and his first customers waiting.",
     bodyScale: 1,
   },
 ];
@@ -69,7 +69,7 @@ const PRODUCT_SLIDES = [
     title: "has an app built",
     titleScale: 0.8,
     body:
-      "It's the thing he built instead of studying for finals. It lives on TestFlight, a study planner his roommates swear by. Twelve users, all of them friends.",
+      "A study planner, built instead of studying for finals, live on TestFlight with 12 users, all of them friends. The app works and nobody knows it exists.",
     bodyScale: 1,
   },
   {
@@ -78,16 +78,16 @@ const PRODUCT_SLIDES = [
     title: "tells us what his app does",
     titleScale: 0.75,
     body:
-      "Today he shows it off: the problem it solves, and how it works. Just like he would demo it to Molly on facetime.",
+      "He tells Proovd about the app, as if he’s talking to a friend. We turn it from a messy explanation into a campaign page people can back.",
     bodyScale: 1,
   },
   {
     img: "/assets/Campaign_Evan.webp",
     alt: "Evan matched with a creator",
-    title: "gets matched with a creator",
+    title: "gets matched",
     titleScale: 0.75,
     body:
-      "Proovd pairs him with a YouTuber with 80K subs in his niche. The part Evan dreads most, getting strangers to care, just became someone else's job.",
+      "Proovd pairs him with a vetted YouTuber: 80K subs, exactly his niche. Reaching past his friend group just became someone else’s job.",
     bodyScale: 1,
   },
   {
@@ -96,16 +96,16 @@ const PRODUCT_SLIDES = [
     title: "Campaign goes live",
     titleScale: 0.75,
     body:
-      "The creator hits post, and Evan's app is suddenly in front of 80,000 people, not after 6 months of grinding for downloads, but today.",
+      "The creator hits post, and 80,000 people meet the app today. The ones who want in reserve a founding-member spot. Their card is saved, not charged yet.",
     bodyScale: 1,
   },
   {
     img: "/assets/Money_Evan.webp",
     alt: "The campaign making money",
-    title: "Campaign makes money",
+    title: "has users",
     titleScale: 0.75,
     body:
-      "now he know's people want his app and he has the money and the user base to make it grow",
+      "When the campaign closes, the saved cards get charged and he keeps whatever came in. His app finally has users he can keep building for.",
     bodyScale: 1,
   },
 ];
@@ -121,6 +121,9 @@ export function EvanSection() {
   // a step requested mid-transition is remembered and fired the moment the
   // transition ends — clicks must never be silently swallowed
   const pendingStep = useRef(0);
+  // the opening "This is Evan" statement is playing — all scrolling holds,
+  // so a keep-scrolling user can't land themselves mid-carousel
+  const introBusy = useRef(false);
   // the wheel effect's "glide to the next section" — shared with the cursor
   const commitDownRef = useRef<(() => void) | null>(null);
   // re-aims the sticker cursor's arrow — called the moment a step happens,
@@ -342,39 +345,50 @@ export function EvanSection() {
     let lastDir = 0;
     let lastActiveAt = 0;
     let lastEventAt = 0;
-    let wasEngaged = false;
 
     // past the last chapter, scrolling down COMMITS a glide to the next
     // section — the same scroll help the hero gives — instead of mushy
-    // free scroll
-    let sectionCommitting = false;
-    const blockInput = (e: Event) => e.preventDefault();
-    const releaseCommit = () => {
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
-      sectionCommitting = false;
-    };
+    // free scroll. The glide lives in the shared scroll-glide module, so
+    // its landing tail can't trip the creators helper.
     const commitDown = () => {
-      if (sectionCommitting) return;
-      sectionCommitting = true;
-      window.addEventListener("wheel", blockInput, { passive: false });
-      window.addEventListener("touchmove", blockInput, { passive: false });
+      if (glideBusy()) return;
       const pin = root.parentElement ?? root;
-      gsap.to(window, {
-        scrollTo: { y: pin.offsetTop + pin.offsetHeight, autoKill: false },
-        duration: 0.4,
-        ease: "power2.inOut",
-        overwrite: "auto",
-        onComplete: releaseCommit,
-        onInterrupt: releaseCommit,
-      });
+      glideTo(pin.offsetTop + pin.offsetHeight, 1);
     };
     commitDownRef.current = commitDown;
 
     const onWheel = (e: WheelEvent) => {
       if (e.deltaY === 0) return;
+      // the opening statement is playing — every tick holds until it hands
+      // off to the carousel
+      if (introBusy.current) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      // a glide in flight, or the dying tail of one that just landed here
+      // (hero → Evan, creators → Evan) — swallowed before it can step a
+      // chapter or fall through to the hero's glide home
+      if (glideGate(e)) {
+        e.stopPropagation();
+        return;
+      }
       if (!engaged()) {
-        wasEngaged = false;
+        // near-alignment drift: tiny trackpad deltas (below every intent
+        // threshold) used to slide the page right past this un-pinned
+        // section — the engagement window is only ~4px tall. Inside the
+        // band, a real gesture re-parks the section on its rail instead.
+        const r = root.getBoundingClientRect();
+        if (r.top < -2 && r.top > -window.innerHeight * 0.35) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (intentTick(e)) {
+            glideTo(
+              (root.parentElement ?? root).offsetTop,
+              e.deltaY > 0 ? 1 : -1,
+            );
+          }
+        }
         return;
       }
 
@@ -382,12 +396,6 @@ export function EvanSection() {
       const dir = e.deltaY > 0 ? 1 : -1;
       const mag = Math.abs(e.deltaY);
       const cur = slideRef.current;
-
-      // arriving mid-fling from the hero: the carry momentum starts settled
-      if (!wasEngaged) {
-        wasEngaged = true;
-        lastActiveAt = now;
-      }
 
       // a direction flip is unambiguous intent — momentum tails never
       // reverse — so it ends the settle window on the spot
@@ -450,23 +458,72 @@ export function EvanSection() {
     // stop. This PASSIVE listener only watches where the scroll landed and
     // steps the carousel to match; it never blocks or fights the scroll.
     const pin = root.parentElement; // .pinSpace
+
+    // ONE chapter per swipe, however hard the fling. The CSS snap marks ask
+    // for scroll-snap-stop: always, but mobile browsers still sail past
+    // them on strong flings — so each gesture (the touch plus its momentum
+    // tail) is clamped to a single step from the chapter it began on.
+    // Overshoot kills the momentum (overflow: hidden for one frame) and
+    // parks the page exactly on the neighboring chapter's snap mark.
+    let gestureBase = 0; // chapter when this gesture began
+    let gestureLive = false; // finger down, or momentum still streaming
+    let gestureQuiet = 0;
     const onScroll = () => {
       if (!pin) return;
       const stepPx = (pin.offsetHeight - root.offsetHeight) / last;
       if (stepPx <= 0) return; // desktop layout — wrapper adds no room
+      const y = window.scrollY;
+      const zoneEnd = pin.offsetTop + last * stepPx;
+
+      // statement playing: any scroll into the chapter zone is cut dead and
+      // parked on chapter 0 until the intro hands off
+      if (introBusy.current) {
+        if (y > pin.offsetTop && y < zoneEnd) {
+          const el = document.documentElement;
+          el.style.overflow = "hidden"; // kills the momentum
+          window.scrollTo({ top: pin.offsetTop });
+          requestAnimationFrame(() => {
+            el.style.overflow = "";
+          });
+        }
+        gestureLive = false; // whatever fling this was ends here
+        return;
+      }
+
+      if (!gestureLive) {
+        gestureLive = true;
+        gestureBase = slideRef.current;
+      }
+      clearTimeout(gestureQuiet);
+      gestureQuiet = window.setTimeout(() => {
+        gestureLive = false; // stream went quiet — the gesture is over
+      }, 160);
+
       const idx = Math.max(
         0,
-        Math.min(last, Math.round((window.scrollY - pin.offsetTop) / stepPx)),
+        Math.min(last, Math.round((y - pin.offsetTop) / stepPx)),
       );
+      const clamped = Math.max(gestureBase - 1, Math.min(gestureBase + 1, idx));
+
+      // ran past the one-step budget while still inside the chapter zone:
+      // cut the fling dead and park on the neighbor
+      if (idx !== clamped && y > pin.offsetTop && y < zoneEnd) {
+        const el = document.documentElement;
+        el.style.overflow = "hidden"; // kills the momentum
+        window.scrollTo({ top: pin.offsetTop + clamped * stepPx });
+        requestAnimationFrame(() => {
+          el.style.overflow = "";
+        });
+      }
+
       const cur = slideRef.current;
-      if (idx === cur) return;
-      const dir = idx > cur ? 1 : -1;
+      if (clamped === cur) return;
+      const dir = clamped > cur ? 1 : -1;
       if (slideBusy.current) {
         pendingStep.current = dir; // catch up when the transition settles
         return;
       }
-      goTo(cur + dir); // one chapter at a time, even off a long fling
-      if (Math.abs(idx - cur) > 1) pendingStep.current = dir;
+      goTo(cur + dir);
     };
 
     // Touch: a horizontal SWIPE pages the carousel (vertical scroll stays
@@ -480,6 +537,7 @@ export function EvanSection() {
       tx = e.touches[0].clientX;
       ty = e.touches[0].clientY;
       swiped = false;
+      gestureLive = false; // fresh finger = fresh one-chapter budget
     };
     const onTouchMove = (e: TouchEvent) => {
       if (swiped || slideBusy.current) return;
@@ -504,9 +562,8 @@ export function EvanSection() {
     const touch = window.matchMedia("(hover: none)").matches;
     if (touch) window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
+      clearTimeout(gestureQuiet);
       window.removeEventListener("wheel", onWheel, true);
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
       root.removeEventListener("touchstart", onTouchStart);
       root.removeEventListener("touchmove", onTouchMove);
       if (touch) window.removeEventListener("scroll", onScroll);
@@ -671,6 +728,14 @@ export function EvanSection() {
       flight = null;
     };
 
+    // while the statement plays, active touch scrolling is blocked outright
+    // (the wheel and scroll listeners check introBusy for everything else)
+    const holdTouch = (e: Event) => e.preventDefault();
+    const releaseIntro = () => {
+      introBusy.current = false;
+      window.removeEventListener("touchmove", holdTouch);
+    };
+
     const ctx = gsap.context(() => {
       gsap.set(words, { autoAlpha: 0 });
       const maskWidth = mask.offsetWidth; // the CSS clamp width, in px, today
@@ -722,6 +787,13 @@ export function EvanSection() {
           gsap.set(words, { autoAlpha: 1 });
           const tl = gsap.timeline({
             scrollTrigger: { trigger: root, start: "top 70%", once: true },
+            onStart: () => {
+              introBusy.current = true;
+              window.addEventListener("touchmove", holdTouch, {
+                passive: false,
+              });
+            },
+            onComplete: releaseIntro,
           });
           tl
             // Act 1 — the statement
@@ -761,7 +833,9 @@ export function EvanSection() {
               "-=0.2",
             );
         } catch {
-          // Motion must never leave content hidden (§6.6).
+          // Motion must never leave content hidden (§6.6) — or scrolling
+          // held behind an intro that died.
+          releaseIntro();
           gsap.set(statementWrap, { display: "none" });
           gsap.set(detail, { autoAlpha: 1 });
           gsap.set(thumb, { visibility: "visible" });
@@ -777,6 +851,7 @@ export function EvanSection() {
 
     return () => {
       cancelled = true;
+      releaseIntro();
       killFlight();
       ctx.revert();
     };
@@ -838,8 +913,8 @@ export function EvanSection() {
                 data-thumb
               />
               <span className={styles.evanName} data-evan-name>
-                {/* the campaign chapters read "Evan's… Campaign goes live" */}
-                {slide >= 3 ? "Evan's…" : "Evan…"}
+                {/* only the live chapter reads "Evan's… Campaign goes live" */}
+                {slide === 3 ? "Evan's…" : "Evan…"}
               </span>
             </div>
             <div className={styles.swap} data-swap>

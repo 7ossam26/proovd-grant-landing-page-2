@@ -195,9 +195,9 @@ export function Navbar() {
             Got a product?
           </a>
           <a className={styles.link} href="#affiliate" data-hover="underline">
-            I’m an affiliate
+            Got an audience?
           </a>
-          <a className={styles.jump} href="#start" data-hover="sweep">
+          <a className={styles.jump} href="#start" data-hover="primary">
             Jump in
           </a>
         </div>
@@ -224,7 +224,7 @@ export function Navbar() {
           Got a product?
         </a>
         <a className={styles.panelLink} href="#affiliate" onClick={toggleMenu}>
-          I’m an affiliate
+          Got an audience?
         </a>
         <a
           className={styles.panelJump}

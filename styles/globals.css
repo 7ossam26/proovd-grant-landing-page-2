@@ -22,21 +22,23 @@ body::-webkit-scrollbar {
 }
 
 /* Kit hover recipes (bound by components/hover-fx.tsx, from proovd-motion.js).
-   The fill/underline are gradients sized by a CSS var that GSAP tweens;
-   doubled attribute selectors outrank the buttons' own module classes. */
-[data-hover="sweep"][data-hover] {
-  --sweep: 0;
-  background-image: linear-gradient(var(--brand), var(--brand));
-  background-repeat: no-repeat;
-  background-position: left center;
-  background-size: calc(var(--sweep) * 100%) 100%;
-}
-
+   Underline draw exactly as the kit builds it: a currentColor hairline
+   ::after scaled by --u, its origin flipped by --uo so it draws in from
+   the left and collapses out to the right. */
 [data-hover="underline"][data-hover] {
   --u: 0;
-  background-image: linear-gradient(currentColor, currentColor);
-  background-repeat: no-repeat;
-  background-position: left calc(100% - 0.05em);
-  background-size: calc(var(--u) * 100%) 0.125rem;
-  padding-bottom: 0.2em;
+  --uo: left center;
+  position: relative;
+}
+
+[data-hover="underline"][data-hover]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.15em;
+  height: 0.0625rem; /* the kit's 1px hairline, in rem per the px rule */
+  background: currentColor;
+  transform: scaleX(var(--u));
+  transform-origin: var(--uo);
 }

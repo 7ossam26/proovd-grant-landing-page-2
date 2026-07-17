@@ -11,9 +11,10 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: clamp(1.5rem, 3vw, 3rem);
+  gap: clamp(1.75rem, 3.2vw, 3.25rem);
   background: #011E0B; /* same color as the navbar */
-  padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem);
+  /* tighter block padding — the content gets the room instead */
+  padding: clamp(4.5rem, 7vw, 7rem) clamp(1.25rem, 3.5vw, 3.5rem);
   overflow: hidden;
 }
 
@@ -36,10 +37,61 @@
 .sub {
   color: var(--mint);
   font-weight: 400;
-  font-size: clamp(1.0625rem, 1.9vw, 2.25rem);
+  font-size: clamp(1.125rem, 2vw, 2.375rem);
   line-height: 1.4;
-  max-width: 34ch;
+  max-width: 44ch;
   margin: 0;
+}
+
+/* type sits above the corner stickers wherever they meet */
+.title,
+.sub,
+.stack,
+.kicker {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── the guarantee stack ──────────────────────────────────────────────── */
+
+.stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 1.8vw, 1.875rem);
+  max-width: min(100%, 58ch);
+  text-align: left;
+}
+
+.stackLine {
+  color: var(--mint);
+  font-weight: 400;
+  font-size: clamp(1.0625rem, 1.7vw, 2rem);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* the question leads each line in white so the stack scans in four beats */
+.stackQ {
+  color: var(--white);
+  font-weight: 600;
+}
+
+/* the kicker is a yellow toast — the kit's accent treatment, slapped on
+   slightly crooked like the site's tags */
+.kicker {
+  background: var(--accent-yellow);
+  color: var(--darker);
+  font-weight: 700;
+  font-size: clamp(1.125rem, 1.7vw, 2rem);
+  line-height: 1.4;
+  max-width: min(100%, 44ch);
+  margin: clamp(0.75rem, 1.5vw, 1.5rem) 0 0; /* breathes apart from the stack */
+  padding: 0.7em 1.2em;
+  border-radius: 3px;
+  rotate: -1deg;
 }
 
 /* ── corner stickers ──────────────────────────────────────────────────── */
@@ -79,22 +131,37 @@
   rotate: 5deg;
 }
 
-/* phone: pull the stickers in tighter so they frame, not crowd */
+/* phone: the stickers pin to the extreme corners and the section pads
+   PAST them — the text column and the stickers can never overlap */
 @media (max-width: 700px) {
+  .section {
+    padding-top: clamp(7.5rem, 31vw, 10rem);
+    padding-bottom: clamp(7rem, 29vw, 9.5rem);
+    gap: clamp(1.25rem, 5vw, 1.75rem);
+  }
+
+  /* hugging the text block — still inside the padding zone, never on it */
   .stickerTopLeft {
-    top: 16%;
+    width: clamp(7rem, 31vw, 9.5rem);
+    left: 5%;
+    top: 2.5%;
   }
 
   .stickerTopRight {
-    top: 20%;
+    width: clamp(5.25rem, 23vw, 7.25rem);
+    right: 6%;
+    top: 5%;
   }
 
   .stickerBottomLeft {
-    width: clamp(7rem, 32vw, 9rem);
-    bottom: 10%;
+    width: clamp(7rem, 31vw, 9.5rem);
+    left: 4%;
+    bottom: 2.5%;
   }
 
   .stickerBottomRight {
-    width: clamp(6rem, 28vw, 8rem);
+    width: clamp(6.5rem, 28vw, 8.75rem);
+    right: 5%;
+    bottom: 4%;
   }
 }

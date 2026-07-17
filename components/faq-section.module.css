@@ -60,7 +60,7 @@
 
 .plus {
   flex: none;
-  color: var(--brand);
+  color: var(--darker);
   font-weight: 900;
   font-size: 1.35em;
   line-height: 1;

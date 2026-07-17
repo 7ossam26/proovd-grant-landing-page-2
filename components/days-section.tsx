@@ -1,13 +1,13 @@
 "use client";
 
 import gsap from "gsap";
-import { ScrollToPlugin } from "gsap/ScrollToPlugin";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
+import { glideGate, glideTo, intentTick } from "./scroll-glide";
 import styles from "./days-section.module.css";
 
-gsap.registerPlugin(ScrollToPlugin, ScrollTrigger, SplitText);
+gsap.registerPlugin(ScrollTrigger, SplitText);
 
 export function DaysSection() {
   const rootRef = useRef<HTMLElement>(null);
@@ -84,68 +84,25 @@ export function DaysSection() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!root.nextElementSibling) return; // last section — nothing below
 
-    let committing = false;
-    let wasIn = false;
-    let tailAt = 0;
-    const blockInput = (e: Event) => e.preventDefault();
-    const holdInput = () => {
-      window.addEventListener("wheel", blockInput, { passive: false });
-      window.addEventListener("touchmove", blockInput, { passive: false });
-    };
-    const releaseInput = () => {
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
-      committing = false;
-    };
-    const commit = (to: number) => {
-      committing = true;
-      holdInput();
-      gsap.to(window, {
-        scrollTo: { y: to, autoKill: false },
-        duration: 0.4,
-        ease: "power2.inOut",
-        overwrite: "auto",
-        onComplete: releaseInput,
-        onInterrupt: releaseInput,
-      });
-    };
-
     const onWheel = (e: WheelEvent) => {
-      if (committing) {
-        e.preventDefault();
-        return;
-      }
+      if (glideGate(e)) return; // glide in flight, or a landing's tail
       const top = root.offsetTop;
       const H = root.offsetHeight;
       const y = window.scrollY;
-      if (y < top - 2) {
-        wasIn = false;
-        return; // above this section — not ours to steer
-      }
-      const now = performance.now();
-      if (!wasIn) {
-        wasIn = true;
-        tailAt = now; // just arrived — the carry fling settles first
-      }
+      if (y < top - 2) return; // above this section — not ours to steer
+      // in-region ticks are HELD and the glide commits on accumulated
+      // intent — tiny trackpad deltas add up instead of drifting natively
       if (e.deltaY > 0 && y < top + H - 2) {
         e.preventDefault();
-        if (now - tailAt < 160) {
-          tailAt = now; // arrival momentum — hold the page still instead
-          return;
-        }
-        commit(top + H); // glide down to the next section
+        if (intentTick(e)) glideTo(top + H, 1); // glide down to the next section
       } else if (e.deltaY < 0 && y > top + 2 && y <= top + H + 2) {
         e.preventDefault();
-        commit(top); // glide back up to this section
+        if (intentTick(e)) glideTo(top, -1); // glide back up to this section
       }
     };
 
     window.addEventListener("wheel", onWheel, { passive: false });
-    return () => {
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("wheel", blockInput);
-      window.removeEventListener("touchmove", blockInput);
-    };
+    return () => window.removeEventListener("wheel", onWheel);
   }, []);
 
   return (
@@ -165,8 +122,7 @@ export function DaysSection() {
           className={styles.cta}
           href="#start"
           data-cta
-          data-hover="sweep"
-          data-hover-text="#013F17"
+          data-hover="primary"
         >
           Start Campaign
         </a>
