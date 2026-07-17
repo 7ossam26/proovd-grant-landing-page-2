@@ -28,13 +28,13 @@
 .bg {
   position: absolute;
   inset: 0;
-  background: url("/assets/background-calendar-desktop.png") center / cover
+  background: url("/assets/background-calendar-desktop.webp") center / cover
     no-repeat;
 }
 
 @media (max-width: 700px) {
   .bg {
-    background-image: url("/assets/background-calendar-mobile.png");
+    background-image: url("/assets/background-calendar-mobile.webp");
   }
 }
 

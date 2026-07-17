@@ -182,7 +182,7 @@ export function Navbar() {
         <a href="/">
           <img
             className={styles.logo}
-            src="/assets/Proovd Logo.png"
+            src="/assets/Proovd Logo.webp"
             alt="Proovd"
             data-nav-logo
           />

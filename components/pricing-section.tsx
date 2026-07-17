@@ -113,7 +113,7 @@ export function PricingSection() {
       <div className={styles.card} data-card>
         <img
           className={styles.money}
-          src="/assets/sticker-4.png"
+          src="/assets/sticker-4.webp"
           alt=""
           aria-hidden="true"
           data-money

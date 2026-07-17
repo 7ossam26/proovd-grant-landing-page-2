@@ -21,18 +21,18 @@ const CREATORS: Array<{
   bg: string;
   fg: "dark" | "light";
 }> = [
-  { img: "/assets/Creator-1.png", niche: "Lifestyle", handle: "@liv.days", followers: "96K", platform: "instagram", bg: "#86A28C", fg: "light" },
-  { img: "/assets/Creator-2.png", niche: "Streaming", handle: "@nova.plays", followers: "143K", platform: "tiktok", bg: "#D3F8C5", fg: "dark" },
-  { img: "/assets/Creator-3.png", niche: "Fitness", handle: "@formcheck", followers: "312K", platform: "youtube", bg: "#E9FFE1", fg: "dark" },
-  { img: "/assets/Frame 4.png", niche: "Music", handle: "@spinbackk", followers: "88K", platform: "tiktok", bg: "#D6F0FF", fg: "dark" },
-  { img: "/assets/Creator-5.png", niche: "Music", handle: "@miso.mixes", followers: "205K", platform: "instagram", bg: "#41ED98", fg: "dark" },
-  { img: "/assets/Creator-6.png", niche: "Fashion", handle: "@LM_styles", followers: "228K", platform: "tiktok", bg: "#F5FA9F", fg: "dark" },
-  { img: "/assets/Creator-7.png", niche: "Branding", handle: "@brandkid", followers: "74K", platform: "youtube", bg: "#013F17", fg: "light" },
-  { img: "/assets/Creator-8.png", niche: "Fashion", handle: "@inkandlenses", followers: "156K", platform: "instagram", bg: "#F2FF8B", fg: "dark" },
-  { img: "/assets/Creator-9.png", niche: "Design", handle: "@designbyrei", followers: "119K", platform: "tiktok", bg: "#86A28C", fg: "light" },
-  { img: "/assets/Creator-10.png", niche: "Lifestyle", handle: "@dailydose.d", followers: "182K", platform: "instagram", bg: "#012D10", fg: "light" },
-  { img: "/assets/Creator-11.png", niche: "Fitness", handle: "@repsbyluca", followers: "267K", platform: "youtube", bg: "#EEF4EE", fg: "dark" },
-  { img: "/assets/Creator-12.png", niche: "Streaming", handle: "@streamsz", followers: "331K", platform: "tiktok", bg: "#2FE58A", fg: "dark" },
+  { img: "/assets/Creator-1.webp", niche: "Lifestyle", handle: "@liv.days", followers: "96K", platform: "instagram", bg: "#86A28C", fg: "light" },
+  { img: "/assets/Creator-2.webp", niche: "Streaming", handle: "@nova.plays", followers: "143K", platform: "tiktok", bg: "#D3F8C5", fg: "dark" },
+  { img: "/assets/Creator-3.webp", niche: "Fitness", handle: "@formcheck", followers: "312K", platform: "youtube", bg: "#E9FFE1", fg: "dark" },
+  { img: "/assets/Frame 4.webp", niche: "Music", handle: "@spinbackk", followers: "88K", platform: "tiktok", bg: "#D6F0FF", fg: "dark" },
+  { img: "/assets/Creator-5.webp", niche: "Music", handle: "@miso.mixes", followers: "205K", platform: "instagram", bg: "#41ED98", fg: "dark" },
+  { img: "/assets/Creator-6.webp", niche: "Fashion", handle: "@LM_styles", followers: "228K", platform: "tiktok", bg: "#F5FA9F", fg: "dark" },
+  { img: "/assets/Creator-7.webp", niche: "Branding", handle: "@brandkid", followers: "74K", platform: "youtube", bg: "#013F17", fg: "light" },
+  { img: "/assets/Creator-8.webp", niche: "Fashion", handle: "@inkandlenses", followers: "156K", platform: "instagram", bg: "#F2FF8B", fg: "dark" },
+  { img: "/assets/Creator-9.webp", niche: "Design", handle: "@designbyrei", followers: "119K", platform: "tiktok", bg: "#86A28C", fg: "light" },
+  { img: "/assets/Creator-10.webp", niche: "Lifestyle", handle: "@dailydose.d", followers: "182K", platform: "instagram", bg: "#012D10", fg: "light" },
+  { img: "/assets/Creator-11.webp", niche: "Fitness", handle: "@repsbyluca", followers: "267K", platform: "youtube", bg: "#EEF4EE", fg: "dark" },
+  { img: "/assets/Creator-12.webp", niche: "Streaming", handle: "@streamsz", followers: "331K", platform: "tiktok", bg: "#2FE58A", fg: "dark" },
 ];
 
 const INK = { dark: "#013F17", light: "#E9FFE1" } as const;

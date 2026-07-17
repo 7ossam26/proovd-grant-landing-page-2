@@ -19,7 +19,7 @@
 .bg {
   position: absolute;
   inset: 0;
-  background-image: url("/assets/Hero_desktop.png");
+  background-image: url("/assets/Hero_desktop.webp");
   background-size: cover;
   background-position: 35% center;
   z-index: 0;
@@ -89,7 +89,7 @@
    block sits low over the keyboard. Sizes re-derived from phone width. */
 @media (max-width: 700px) {
   .bg {
-    background-image: url("/assets/Hero_mobile.png");
+    background-image: url("/assets/Hero_mobile.webp");
     background-position: center top;
   }
 

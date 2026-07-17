@@ -167,7 +167,7 @@ export function Hero() {
       <div className={styles.bg} aria-hidden="true" />
       <img
         className={styles.logo}
-        src="/assets/Proovd Logo.png"
+        src="/assets/Proovd Logo.webp"
         alt="Proovd"
         data-hero-logo
       />

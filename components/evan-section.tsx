@@ -15,7 +15,7 @@ gsap.registerPlugin(Flip, ScrollToPlugin, ScrollTrigger, SplitText);
 // layout down.
 const SLIDES = [
   {
-    img: "/assets/Evan_Idea.png",
+    img: "/assets/Evan_Idea.webp",
     alt: "Evan surrounded by sticky notes, thinking",
     title: "has an Idea",
     titleScale: 1,
@@ -24,7 +24,7 @@ const SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/saying_his_idea_evan.png",
+    img: "/assets/saying_his_idea_evan.webp",
     alt: "Evan saying his idea out loud",
     title: "says his idea out loud",
     titleScale: 0.75,
@@ -33,7 +33,7 @@ const SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Campaign_Evan.png",
+    img: "/assets/Campaign_Evan.webp",
     alt: "Evan matched with a creator",
     title: "gets matched with a creator",
     titleScale: 0.75,
@@ -42,7 +42,7 @@ const SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Live_Evan.png",
+    img: "/assets/Live_Evan.webp",
     alt: "The campaign going live",
     title: "Campaign goes live",
     titleScale: 0.75,
@@ -51,7 +51,7 @@ const SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Money_Evan.png",
+    img: "/assets/Money_Evan.webp",
     alt: "The campaign making money",
     title: "Campaign makes money",
     titleScale: 0.75,
@@ -64,7 +64,7 @@ const SLIDES = [
 // product mode: the same journey, told about the app he already built
 const PRODUCT_SLIDES = [
   {
-    img: "/assets/Product_Evan.png",
+    img: "/assets/Product_Evan.webp",
     alt: "Evan with the app he built",
     title: "has an app built",
     titleScale: 0.8,
@@ -73,7 +73,7 @@ const PRODUCT_SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/saying_his_idea_evan.png",
+    img: "/assets/saying_his_idea_evan.webp",
     alt: "Evan showing what his app does",
     title: "tells us what his app does",
     titleScale: 0.75,
@@ -82,7 +82,7 @@ const PRODUCT_SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Campaign_Evan.png",
+    img: "/assets/Campaign_Evan.webp",
     alt: "Evan matched with a creator",
     title: "gets matched with a creator",
     titleScale: 0.75,
@@ -91,7 +91,7 @@ const PRODUCT_SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Live_Evan.png",
+    img: "/assets/Live_Evan.webp",
     alt: "The campaign going live",
     title: "Campaign goes live",
     titleScale: 0.75,
@@ -100,7 +100,7 @@ const PRODUCT_SLIDES = [
     bodyScale: 1,
   },
   {
-    img: "/assets/Money_Evan.png",
+    img: "/assets/Money_Evan.webp",
     alt: "The campaign making money",
     title: "Campaign makes money",
     titleScale: 0.75,
@@ -680,7 +680,7 @@ export function EvanSection() {
 
       // Preload the smiling frame so the end-of-animation cut is instant.
       const smiling = new Image();
-      smiling.src = "/assets/Evan_main_smiling.png";
+      smiling.src = "/assets/Evan_main_smiling.webp";
       // …and every slide photo (both modes' openers included), so steps and
       // flips never wait on the network.
       for (const s of SLIDES) {
@@ -833,7 +833,7 @@ export function EvanSection() {
             <div className={styles.evanRow}>
               <img
                 className={styles.thumb}
-                src="/assets/Evan_main_smiling.png"
+                src="/assets/Evan_main_smiling.webp"
                 alt="Evan"
                 data-thumb
               />
@@ -899,7 +899,7 @@ export function EvanSection() {
           <span className={styles.photoMask} data-photo-mask>
             <img
               className={styles.photo}
-              src="/assets/Evan_main.png"
+              src="/assets/Evan_main.webp"
               alt="Evan"
               data-photo
             />

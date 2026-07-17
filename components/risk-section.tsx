@@ -10,10 +10,10 @@ import styles from "./risk-section.module.css";
 gsap.registerPlugin(ScrollToPlugin, ScrollTrigger, SplitText);
 
 const STICKERS = [
-  { img: "/assets/sticker-1.png", alt: "Shield sticker", cls: "stickerTopLeft" },
-  { img: "/assets/sticker-4.png", alt: "$$$ sticker", cls: "stickerTopRight" },
-  { img: "/assets/sticker-3.png", alt: "You're covered umbrella sticker", cls: "stickerBottomLeft" },
-  { img: "/assets/sticker-2.png", alt: "No risk sticker", cls: "stickerBottomRight" },
+  { img: "/assets/sticker-1.webp", alt: "Shield sticker", cls: "stickerTopLeft" },
+  { img: "/assets/sticker-4.webp", alt: "$$$ sticker", cls: "stickerTopRight" },
+  { img: "/assets/sticker-3.webp", alt: "You're covered umbrella sticker", cls: "stickerBottomLeft" },
+  { img: "/assets/sticker-2.webp", alt: "No risk sticker", cls: "stickerBottomRight" },
 ] as const;
 
 export function RiskSection() {
