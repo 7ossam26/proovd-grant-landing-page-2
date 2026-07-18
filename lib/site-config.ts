@@ -13,7 +13,7 @@ export const siteConfig = {
    * Homepage <title> (default). Primary keyword + brand, kept ≤60 chars.
    * Sub-pages get "%s | Proovd" via the title template in layout.tsx.
    */
-  defaultTitle: "Proovd — Validate your idea with real pre-orders",
+  defaultTitle: "Proovd",
 
   /**
    * Default meta description (≤155 chars) — intent-matching, grounded in the
