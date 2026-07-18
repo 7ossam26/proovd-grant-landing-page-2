@@ -35,7 +35,7 @@ export const siteConfig = {
    * deploy env; the fallback is the production origin so a missing var can't ship
    * localhost URLs.
    */
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "https://proovd.co",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://proovd.co",
 
   /** The Proovd app. CTAs route founders and affiliates to their real entry points. */
   appUrl: "https://app.proovd.co",
