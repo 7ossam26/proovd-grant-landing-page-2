@@ -77,7 +77,9 @@ export const metadata: Metadata = {
   // (set GOOGLE_SITE_VERIFICATION in Dokploy); Next omits the tag entirely when
   // the var is absent, so nothing ships until you paste the real token.
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION,
+    // `|| undefined` so an empty env var omits the tag entirely rather than
+    // emitting a broken empty <meta content="">, which would fail verification.
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
   },
 };
 
