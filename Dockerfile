@@ -14,6 +14,22 @@ RUN npm ci
 # ---- Builder ----------------------------------------------------------------
 FROM base AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
+# Next inlines NEXT_PUBLIC_* and evaluates metadata (incl. the Search Console
+# token) during the static build, so these must be present at BUILD time — not
+# just runtime. Dokploy passes configured variables to the build as args; the
+# ARG/ENV pairs below capture them so the values are baked into the output.
+# All are optional: the site URL falls back in code, analytics/verification stay
+# off until their vars are set.
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_CLARITY_PROJECT_ID
+ARG NEXT_PUBLIC_UMAMI_SRC
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ARG GOOGLE_SITE_VERIFICATION
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
+    NEXT_PUBLIC_CLARITY_PROJECT_ID=$NEXT_PUBLIC_CLARITY_PROJECT_ID \
+    NEXT_PUBLIC_UMAMI_SRC=$NEXT_PUBLIC_UMAMI_SRC \
+    NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID \
+    GOOGLE_SITE_VERIFICATION=$GOOGLE_SITE_VERIFICATION
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Git does not track empty directories; guarantee public/ exists so the runner's

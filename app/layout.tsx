@@ -73,6 +73,12 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+  // Google Search Console ownership proof. Reads the token from the deploy env
+  // (set GOOGLE_SITE_VERIFICATION in Dokploy); Next omits the tag entirely when
+  // the var is absent, so nothing ships until you paste the real token.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+  },
 };
 
 // Next 16 requires viewport/themeColor as a separate export (deprecated in
