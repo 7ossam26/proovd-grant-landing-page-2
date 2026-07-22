@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { EASE, park, playFrom, splitWords, type WordSplit } from "@/lib/motion";
+import { siteConfig } from "@/lib/site-config";
 import styles from "./hero.module.css";
 
 const MOTION = {
@@ -137,12 +138,21 @@ export function Hero() {
         className={styles.logo}
         src="/assets/Proovd Logo.webp"
         alt="Proovd"
+        width={909}
+        height={274}
+        decoding="async"
+        fetchPriority="high"
         data-hero-logo
       />
       <h1 className={styles.headline} data-headline>
         Don’t go grey building the wrong thing.
       </h1>
-      <a href="#start" className={styles.start} data-cta data-hover="primary">
+      <a
+        href={siteConfig.founderUrl}
+        className={styles.start}
+        data-cta
+        data-hover="primary"
+      >
         Start
       </a>
     </section>

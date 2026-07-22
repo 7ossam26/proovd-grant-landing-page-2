@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { easeFn } from "@/lib/motion";
+import { siteConfig } from "@/lib/site-config";
 import styles from "./creators-section.module.css";
 
 type Platform = "tiktok" | "youtube" | "instagram";
@@ -396,7 +397,11 @@ export function CreatorsSection() {
           Our creators pitch your idea to their followers and make commission
           when you earn
         </h2>
-        <a className={styles.cta} href="#start" data-hover="primary">
+        <a
+          className={styles.cta}
+          href={siteConfig.founderUrl}
+          data-hover="primary"
+        >
           Start Campaign
         </a>
       </div>
@@ -408,6 +413,10 @@ export function CreatorsSection() {
               className={styles.photo}
               src={c.img}
               alt={`${c.niche} creator ${c.handle}`}
+              width={454}
+              height={470}
+              decoding="async"
+              loading="lazy"
               data-photo
             />
             {/* compact face: niche strip along the bottom */}

@@ -1472,7 +1472,15 @@ export function EvanSection() {
                 data-ev-scene
                 data-i={i}
               >
-                <img className={styles.sceneImg} src={sl.img} alt="" />
+                <img
+                  className={styles.sceneImg}
+                  src={sl.img}
+                  alt=""
+                  width={906}
+                  height={696}
+                  decoding="async"
+                  loading="lazy"
+                />
               </div>
             ))}
             <div className={styles.peelMount} ref={peelMountRef} />
@@ -1501,7 +1509,14 @@ export function EvanSection() {
             <section key={ROLL_NUMBERS[i]} className={styles.step} data-ev-step>
               <div className={styles.kicker} data-ev-kicker>
                 <span className={styles.avatar} data-ev-avatar>
-                  <img src={AVATAR} alt="" />
+                  <img
+                    src={AVATAR}
+                    alt=""
+                    width={1063}
+                    height={1153}
+                    decoding="async"
+                    loading="lazy"
+                  />
                 </span>
                 <span className={styles.kickerLabel}>
                   {i === 3 ? "Evan's…" : "Evan…"}
@@ -1565,6 +1580,9 @@ export function EvanSection() {
               className={styles.photo}
               src="/assets/Evan_main.webp"
               alt="Evan"
+              width={1063}
+              height={1153}
+              decoding="async"
               data-ev-photo
             />
           </span>

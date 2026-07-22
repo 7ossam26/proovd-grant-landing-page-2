@@ -9,6 +9,7 @@ import {
   splitWords,
   type WordSplit,
 } from "@/lib/motion";
+import { siteConfig } from "@/lib/site-config";
 import styles from "./days-section.module.css";
 
 export function DaysSection() {
@@ -123,7 +124,12 @@ export function DaysSection() {
           is all it takes for you to make money off of your idea and know people
           want it
         </p>
-        <a className={styles.cta} href="#start" data-cta data-hover="primary">
+        <a
+          className={styles.cta}
+          href={siteConfig.founderUrl}
+          data-cta
+          data-hover="primary"
+        >
           Start Campaign
         </a>
       </div>

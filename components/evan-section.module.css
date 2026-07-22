@@ -502,32 +502,42 @@
   background-size: 100% 88%;
 }
 
-/* ── reduced motion: static, fully-assembled states; instant page flips ── */
+/* ── reduced motion: static, fully-assembled states; instant page flips.
+   Every rule here has to out-rank the inline styles the story engine writes
+   (its rAF loop paints transforms/opacity straight onto the nodes), so
+   !important is the only weight that wins — biome-ignore, deliberate. */
 
 @media (prefers-reduced-motion: reduce) {
   .section *,
   .section *::before,
   .section *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     animation: none !important;
   }
 
   .section .w > span,
   .section .copyBody,
   .section .kicker {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     transform: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     opacity: 1 !important;
   }
 
   .section .copyBody mark {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     background-size: 100% 88% !important;
   }
 
   .section .scene {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     transform: none !important;
   }
 
   .statementWrap {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     display: none !important; /* land directly on the story */
   }
 }

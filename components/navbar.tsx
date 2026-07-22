@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { EASE, playFrom, playTo } from "@/lib/motion";
+import { siteConfig } from "@/lib/site-config";
 import styles from "./navbar.module.css";
 
 export function Navbar() {
@@ -264,20 +265,39 @@ export function Navbar() {
             className={styles.logo}
             src="/assets/Proovd Logo.webp"
             alt="Proovd"
+            width={909}
+            height={274}
+            decoding="async"
             data-nav-logo
           />
         </a>
         <div className={styles.links}>
-          <a className={styles.link} href="#idea" data-hover="underline">
+          <a
+            className={styles.link}
+            href={siteConfig.founderUrl}
+            data-hover="underline"
+          >
             Got an idea?
           </a>
-          <a className={styles.link} href="#product" data-hover="underline">
+          <a
+            className={styles.link}
+            href={siteConfig.founderUrl}
+            data-hover="underline"
+          >
             Got a product?
           </a>
-          <a className={styles.link} href="#affiliate" data-hover="underline">
+          <a
+            className={styles.link}
+            href={siteConfig.affiliateUrl}
+            data-hover="underline"
+          >
             Got an audience?
           </a>
-          <a className={styles.jump} href="#start" data-hover="primary">
+          <a
+            className={styles.jump}
+            href={siteConfig.founderUrl}
+            data-hover="primary"
+          >
             Jump in
           </a>
         </div>
@@ -297,18 +317,30 @@ export function Navbar() {
 
       {/* phone menu sheet — slides down from behind the navbar */}
       <div ref={panelRef} className={styles.panel}>
-        <a className={styles.panelLink} href="#idea" onClick={toggleMenu}>
+        <a
+          className={styles.panelLink}
+          href={siteConfig.founderUrl}
+          onClick={toggleMenu}
+        >
           Got an idea?
         </a>
-        <a className={styles.panelLink} href="#product" onClick={toggleMenu}>
+        <a
+          className={styles.panelLink}
+          href={siteConfig.founderUrl}
+          onClick={toggleMenu}
+        >
           Got a product?
         </a>
-        <a className={styles.panelLink} href="#affiliate" onClick={toggleMenu}>
+        <a
+          className={styles.panelLink}
+          href={siteConfig.affiliateUrl}
+          onClick={toggleMenu}
+        >
           Got an audience?
         </a>
         <a
           className={styles.panelJump}
-          href="#start"
+          href={siteConfig.founderUrl}
           onClick={toggleMenu}
           data-panel-jump
         >

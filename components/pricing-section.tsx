@@ -10,6 +10,7 @@ import {
   splitWords,
   type WordSplit,
 } from "@/lib/motion";
+import { siteConfig } from "@/lib/site-config";
 import styles from "./pricing-section.module.css";
 
 const INCLUDES = [
@@ -243,6 +244,10 @@ export function PricingSection() {
           src="/assets/sticker-4.webp"
           alt=""
           aria-hidden="true"
+          width={145}
+          height={145}
+          decoding="async"
+          loading="lazy"
           data-money
         />
         <div className={styles.cardHead}>
@@ -268,7 +273,7 @@ export function PricingSection() {
               </li>
             ))}
           </ul>
-          <a className={styles.cta} href="#start" data-cta>
+          <a className={styles.cta} href={siteConfig.founderUrl} data-cta>
             Start my campaign now
           </a>
           <p className={styles.fine} data-fine>
