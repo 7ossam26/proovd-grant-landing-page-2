@@ -3,12 +3,14 @@
   inset-inline: 0;
   top: 0;
   z-index: 900;
-  transform: translateY(-100%); /* hidden from first paint — no hydration flash */
+  transform: translateY(
+    -100%
+  ); /* hidden from first paint — no hydration flash */
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: clamp(1rem, 3vw, 3rem);
-  background: #011E0B; /* nav-only color, per the mockup spec */
+  background: #011e0b; /* nav-only color, per the mockup spec */
   padding: clamp(0.75rem, 1.3vw, 1.5rem) clamp(1.25rem, 2.7vw, 3.25rem);
   transition: background-color 0.3s ease;
 }
@@ -41,7 +43,7 @@
   align-items: center;
   justify-content: center;
   background: var(--white);
-  color: #011E0B;
+  color: #011e0b;
   border-radius: var(--radius);
   padding: 0.55em 1.9em;
   min-height: var(--touch);
@@ -77,11 +79,11 @@
   position: fixed;
   inset: 0;
   z-index: 890; /* under the navbar so the burger stays tappable */
-  background: #011E0B;
+  background: #011e0b;
   flex-direction: column;
   gap: clamp(1.5rem, 7vw, 2.5rem);
   padding: clamp(6rem, 28vw, 8rem) clamp(1.25rem, 6vw, 2rem)
-           calc(clamp(2rem, 8vw, 3rem) + env(safe-area-inset-bottom));
+    calc(clamp(2rem, 8vw, 3rem) + env(safe-area-inset-bottom));
   transform: translateY(-100%); /* offscreen before JS takes over */
 }
 
@@ -98,7 +100,7 @@
   justify-content: center;
   margin-top: auto; /* docks to the bottom of the sheet (§8.1) */
   background: var(--white);
-  color: #011E0B;
+  color: #011e0b;
   border-radius: var(--radius);
   padding: 0.75em 2em;
   min-height: var(--touch);

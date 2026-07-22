@@ -10,7 +10,7 @@
   justify-content: flex-start;
   gap: clamp(1.25rem, 2.5vw, 2rem);
   padding: clamp(1.5rem, 4vw, 3rem) clamp(1.25rem, 3.5vw, 3.5rem)
-           clamp(4.5rem, 11vw, 10rem); /* larger bottom pad biases the centered
+    clamp(4.5rem, 11vw, 10rem); /* larger bottom pad biases the centered
                                           group upward, closer to the logo */
   background-color: var(--dark); /* holds the moment until the image paints */
   overflow: hidden;
@@ -53,13 +53,6 @@
 /* Figma "component-1" button, converted to responsive values:
    27.39px type → fluid clamp; 16.1/80.6px padding → em so it scales with
    the type; border stays px (the one legal px use). */
-/* touch: the hero is a native snap stop (see globals.css) */
-@media (hover: none) {
-  .hero {
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
-  }
-}
 
 .start {
   position: relative;
@@ -82,7 +75,9 @@
 }
 
 @media (max-width: 600px) {
-  .start { border-width: 3px; }
+  .start {
+    border-width: 3px;
+  }
 }
 
 /* ── Phone posture: taller hero image (face top, keyboard bottom), text
@@ -95,7 +90,7 @@
 
   .hero {
     padding: clamp(1.25rem, 5vw, 2rem) clamp(1rem, 5vw, 1.75rem)
-             clamp(2.5rem, 10vw, 4rem);
+      clamp(2.5rem, 10vw, 4rem);
   }
 
   .logo {

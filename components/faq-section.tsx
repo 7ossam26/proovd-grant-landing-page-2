@@ -1,12 +1,15 @@
 "use client";
 
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef, useState } from "react";
+import {
+  EASE,
+  onceInView,
+  park,
+  playFrom,
+  splitWords,
+  type WordSplit,
+} from "@/lib/motion";
 import styles from "./faq-section.module.css";
-
-gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const FAQS = [
   {
@@ -98,52 +101,87 @@ export function FaqSection() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    const heading = root.querySelector<HTMLElement>("[data-heading]");
+    const items = root.querySelectorAll<HTMLElement>("[data-item]");
+    if (!heading) return;
+
     let cancelled = false;
-    const ctx = gsap.context(() => {
-      const heading = root.querySelector<HTMLElement>("[data-heading]");
-      const items = root.querySelectorAll<HTMLElement>("[data-item]");
-      if (!heading) return;
+    let split: WordSplit | null = null;
+    const anims: Animation[] = [];
+    const cancels: (() => void)[] = [];
+    const unpark = (el: HTMLElement) => {
+      el.style.removeProperty("opacity");
+      el.style.removeProperty("transform");
+      el.style.removeProperty("visibility");
+    };
 
-      const reveal = () => {
-        if (cancelled) return;
-        try {
-          const split = SplitText.create(heading, { type: "words", mask: "words" });
-          const masks = split.words
-            .map((w) => w.parentElement)
-            .filter((p): p is HTMLElement => !!p && p !== heading);
-          gsap.set(masks, { paddingBottom: "0.18em", marginBottom: "-0.18em" });
-          gsap.from(split.words, {
-            yPercent: 130,
-            duration: 0.5,
-            ease: "power4.out",
-            stagger: 0.05,
-            onComplete: () => split.revert(),
-            scrollTrigger: { trigger: heading, start: "top 80%", once: true },
-          });
-          for (const item of items) {
-            gsap.from(item, {
-              y: 16,
-              autoAlpha: 0,
-              duration: 0.4,
-              ease: "power3.out",
-              scrollTrigger: { trigger: item, start: "top 92%", once: true },
-            });
-          }
-        } catch {
-          // Motion must never leave content hidden (§6.6).
-          gsap.set([heading, ...items], { autoAlpha: 1, y: 0 });
+    const reveal = () => {
+      if (cancelled) return;
+      try {
+        // splitWords already carries the 0.18em descender allowance on
+        // its masks, so no extra padding fix is needed here.
+        split = splitWords(heading);
+        // from()-style tweens paint their hidden state at setup time,
+        // not when the scroll line is crossed — park everything now.
+        for (const word of split.words) {
+          park(word, { transform: "translateY(130%)" });
         }
-      };
+        for (const item of items) {
+          park(item, { opacity: "0", transform: "translateY(16px)" });
+        }
+        cancels.push(
+          onceInView(heading, 80, () => {
+            const s = split;
+            if (!s) return;
+            const rises = s.words.map((word, i) =>
+              playFrom(
+                word,
+                { transform: "translateY(130%)" },
+                { duration: 0.5, delay: i * 0.05, ease: EASE.out4 },
+              ),
+            );
+            anims.push(...rises);
+            Promise.all(rises.map((a) => a.finished))
+              .then(() => {
+                s.revert();
+                if (split === s) split = null;
+              })
+              .catch(() => {});
+          }),
+        );
+        for (const item of items) {
+          cancels.push(
+            onceInView(item, 92, () => {
+              anims.push(
+                playFrom(
+                  item,
+                  { opacity: 0, transform: "translateY(16px)" },
+                  { duration: 0.4, ease: EASE.out3 },
+                ),
+              );
+            }),
+          );
+        }
+      } catch {
+        // Motion must never leave content hidden (§6.6).
+        split?.revert();
+        split = null;
+        for (const item of items) unpark(item);
+      }
+    };
 
-      Promise.race([
-        document.fonts.ready,
-        new Promise((resolve) => setTimeout(resolve, 600)),
-      ]).then(reveal);
-    }, root);
+    Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, 600)),
+    ]).then(reveal);
 
     return () => {
       cancelled = true;
-      ctx.revert();
+      for (const cancel of cancels) cancel();
+      for (const anim of anims) anim.cancel();
+      split?.revert();
+      split = null;
+      for (const item of items) unpark(item);
     };
   }, []);
 

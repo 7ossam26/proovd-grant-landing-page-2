@@ -12,15 +12,6 @@ body::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
 
-/* Touch devices: the hero ↔ section handoff is native CSS scroll-snap —
-   browser-composited and buttery. JS scroll tweens fighting touch momentum
-   is what felt laggy; on desktop the wheel hijack still owns the glide. */
-@media (hover: none) {
-  html {
-    scroll-snap-type: y mandatory;
-  }
-}
-
 /* Kit hover recipes (bound by components/hover-fx.tsx, from proovd-motion.js).
    Underline draw exactly as the kit builds it: a currentColor hairline
    ::after scaled by --u, its origin flipped by --uo so it draws in from

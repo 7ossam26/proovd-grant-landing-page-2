@@ -23,13 +23,6 @@
   }
 }
 
-/* touch: a valid native snap stop after the pinned chapters */
-@media (hover: none) {
-  .section {
-    scroll-snap-align: start;
-  }
-}
-
 /* ── copy ─────────────────────────────────────────────────────────────── */
 
 .copy {

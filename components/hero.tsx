@@ -1,18 +1,11 @@
 "use client";
 
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
-import { glideBusy, glideGate, glideTo, intentTick } from "./scroll-glide";
+import { EASE, park, playFrom, splitWords, type WordSplit } from "@/lib/motion";
 import styles from "./hero.module.css";
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
-
 const MOTION = {
-  dur: { base: 0.35, headline: 0.65 },
-  ease: { out: "power3.out", hero: "power4.out" },
-  stagger: { words: 0.065 },
+  dur: { base: 0.35 },
   dist: { enter: 16 },
 };
 
@@ -24,117 +17,116 @@ export function Hero() {
     if (!root) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    const headline = root.querySelector<HTMLElement>("[data-headline]");
+    const logo = root.querySelector<HTMLElement>("[data-hero-logo]");
+    const cta = root.querySelector<HTMLElement>("[data-cta]");
+    if (!headline) return;
+
     let cancelled = false;
-    const cleanupFns: Array<() => void> = [];
-    const ctx = gsap.context(() => {
-      const headline = root.querySelector<HTMLElement>("[data-headline]");
-      const logo = root.querySelector<HTMLElement>("[data-hero-logo]");
-      const cta = root.querySelector<HTMLElement>("[data-cta]");
-      if (!headline) return;
+    const anims: Animation[] = [];
+    let split: WordSplit | null = null;
 
-      gsap.set(headline, { autoAlpha: 0 });
-      if (logo) gsap.set(logo, { autoAlpha: 0, y: -MOTION.dist.enter });
-      if (cta) gsap.set(cta, { autoAlpha: 0, y: MOTION.dist.enter });
+    // Fail-open reset: back to plain CSS — visible, un-transformed.
+    const clearInline = (el: HTMLElement | null) => {
+      if (!el) return;
+      el.style.removeProperty("opacity");
+      el.style.removeProperty("visibility");
+      el.style.removeProperty("transform");
+    };
 
-      const reveal = () => {
-        if (cancelled) return;
-        try {
-          // One overlapping sequence, under a second total: logo drops in
-          // right away, masked words rip through, the button lands with the
-          // tail. Split reverted on complete (§6.4).
-          const split = SplitText.create(headline, {
-            type: "words",
-            mask: "words",
-          });
-          gsap.set(headline, { autoAlpha: 1 });
-          // Order: headline first (quick), then logo, then button.
-          const tl = gsap.timeline();
-          tl.from(
-            split.words,
-            {
-              yPercent: 120,
-              duration: 0.45,
-              ease: "power4.out",
-              stagger: 0.04,
-              onComplete: () => split.revert(),
-            },
-            0,
+    park(headline, { opacity: "0" });
+    if (logo) {
+      park(logo, {
+        opacity: "0",
+        transform: `translateY(-${MOTION.dist.enter}px)`,
+      });
+    }
+    if (cta) {
+      park(cta, {
+        opacity: "0",
+        transform: `translateY(${MOTION.dist.enter}px)`,
+      });
+    }
+
+    const reveal = () => {
+      if (cancelled) return;
+      try {
+        // One overlapping sequence, under a second total: logo drops in
+        // right away, masked words rip through, the button lands with the
+        // tail. Split reverted on complete (§6.4).
+        split = splitWords(headline);
+        // Un-park the headline so the mask spans show.
+        headline.style.removeProperty("opacity");
+        headline.style.removeProperty("visibility");
+        // Order: headline first (quick), then logo, then button — the
+        // 0.65/0.85 delays are the old timeline positions. The from-frames
+        // carry visibility:hidden so fill:"backwards" keeps both elements
+        // hidden AND inert through their delay (autoAlpha parity — CSS
+        // visibility flips to visible only once the tween starts rendering).
+        const wordAnims = split.words.map((word, i) =>
+          playFrom(
+            word,
+            { transform: "translateY(120%)" },
+            { duration: 0.45, delay: i * 0.04, ease: EASE.out4 },
+          ),
+        );
+        anims.push(...wordAnims);
+        Promise.all(wordAnims.map((a) => a.finished))
+          .then(() => {
+            split?.revert();
+            split = null;
+          })
+          .catch(() => {});
+        if (logo) {
+          anims.push(
+            playFrom(
+              logo,
+              {
+                opacity: 0,
+                visibility: "hidden",
+                transform: `translateY(-${MOTION.dist.enter}px)`,
+              },
+              { duration: MOTION.dur.base, delay: 0.65, ease: EASE.out3 },
+            ),
           );
-          if (logo) {
-            tl.to(logo, { autoAlpha: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.65);
-          }
-          if (cta) {
-            tl.to(cta, { autoAlpha: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.85);
-          }
-        } catch {
-          // A failed motion layer must never leave hidden content (§6.6).
-          gsap.set([headline, logo, cta], { autoAlpha: 1, y: 0 });
         }
-      };
-
-      // Commit the scroll the moment 15% of the hero is crossed — no waiting
-      // for the scroll to settle (snap's built-in delay felt laggy). The
-      // glide itself (input hold + landing settle) lives in the shared
-      // scroll-glide module, so its tail can't trip the other helpers.
-      const commit = (to: number, dir: 1 | -1) => {
-        // Announce the glide home immediately so the navbar can exit in sync
-        // instead of waiting for the scroll position to cross a line.
-        if (to === 0) window.dispatchEvent(new CustomEvent("proovd:home"));
-        glideTo(to, dir);
-      };
-
-      // Wheel is hijacked at the source: preventing the FIRST tick stops the
-      // browser from starting its own smooth-scroll animation (a long fling
-      // used to queue deltas that then fought the glide frame-by-frame).
-      const onWheel = (e: WheelEvent) => {
-        if (glideGate(e)) return; // glide in flight, or a landing's tail
-        const y = window.scrollY;
-        const heroH = root.offsetHeight;
-        // in-region ticks are HELD and the glide commits on accumulated
-        // intent — tiny trackpad deltas add up instead of drifting natively
-        if (e.deltaY > 0 && y < heroH - 2) {
-          e.preventDefault();
-          if (intentTick(e)) commit(heroH, 1);
-        } else if (e.deltaY < 0 && y > 0 && y <= heroH + 2) {
-          e.preventDefault();
-          if (intentTick(e)) commit(0, -1);
+        if (cta) {
+          anims.push(
+            playFrom(
+              cta,
+              {
+                opacity: 0,
+                visibility: "hidden",
+                transform: `translateY(${MOTION.dist.enter}px)`,
+              },
+              { duration: MOTION.dur.base, delay: 0.85, ease: EASE.out3 },
+            ),
+          );
         }
-      };
-      window.addEventListener("wheel", onWheel, { passive: false });
-      cleanupFns.push(() => window.removeEventListener("wheel", onWheel));
-
-      // Scrollbar drags (no wheel events) still snap via ScrollTrigger —
-      // desktop only. On touch, native CSS scroll-snap owns the glide
-      // (a JS tween fighting touch momentum is what felt laggy on phones).
-      if (window.matchMedia("(hover: hover)").matches) {
-        ScrollTrigger.create({
-          trigger: root,
-          start: "top top",
-          end: "bottom top",
-          onUpdate: (self) => {
-            if (glideBusy()) return;
-            if (self.direction > 0 && self.progress > 0.15 && self.progress < 0.98) {
-              commit(self.end, 1);
-            } else if (self.direction < 0 && self.progress < 0.85 && self.progress > 0.02) {
-              commit(self.start, -1);
-            }
-          },
-        });
+      } catch {
+        // A failed motion layer must never leave hidden content (§6.6).
+        clearInline(headline);
+        clearInline(logo);
+        clearInline(cta);
       }
+    };
 
-      // Split only after Satoshi is ready — short backstop so the page never
-      // sits idle waiting on the font (word-grain masks don't need line
-      // measurement, so a late swap is harmless).
-      Promise.race([
-        document.fonts.ready,
-        new Promise((resolve) => setTimeout(resolve, 600)),
-      ]).then(reveal);
-    }, root);
+    // Split only after Satoshi is ready — short backstop so the page never
+    // sits idle waiting on the font (word-grain masks don't need line
+    // measurement, so a late swap is harmless).
+    Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, 600)),
+    ]).then(reveal);
 
     return () => {
       cancelled = true;
-      for (const fn of cleanupFns) fn();
-      ctx.revert();
+      for (const a of anims) a.cancel();
+      split?.revert();
+      split = null;
+      clearInline(headline);
+      clearInline(logo);
+      clearInline(cta);
     };
   }, []);
 

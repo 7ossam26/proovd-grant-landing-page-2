@@ -11,14 +11,7 @@
   justify-content: center;
   background: var(--white);
   padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem)
-           clamp(2.5rem, 5vw, 4.5rem);
-}
-
-/* touch: a native snap stop like its siblings */
-@media (hover: none) {
-  .section {
-    scroll-snap-align: start;
-  }
+    clamp(2.5rem, 5vw, 4.5rem);
 }
 
 .heading {
@@ -94,7 +87,7 @@
 
 .cardBody {
   padding: clamp(1.5rem, 2.6vw, 2.75rem) clamp(1.25rem, 2.4vw, 2.5rem)
-           clamp(1.5rem, 2.4vw, 2.5rem);
+    clamp(1.5rem, 2.4vw, 2.5rem);
 }
 
 .priceRow {

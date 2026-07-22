@@ -1,12 +1,16 @@
 "use client";
 
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
 import { useLayoutEffect, useRef } from "react";
+import {
+  EASE,
+  onceInView,
+  park,
+  playFrom,
+  playTo,
+  splitWords,
+  type WordSplit,
+} from "@/lib/motion";
 import styles from "./pricing-section.module.css";
-
-gsap.registerPlugin(ScrollTrigger, SplitText);
 
 const INCLUDES = [
   "Pitch refinement: voice note in, sellable pitch out",
@@ -27,89 +31,171 @@ export function PricingSection() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     let cancelled = false;
-    const ctx = gsap.context(() => {
-      const heading = root.querySelector<HTMLElement>("[data-heading]");
-      const card = root.querySelector<HTMLElement>("[data-card]");
-      const beta = root.querySelector<HTMLElement>("[data-beta]");
-      const money = root.querySelector<HTMLElement>("[data-money]");
-      const cta = root.querySelector<HTMLElement>("[data-cta]");
-      const fine = root.querySelector<HTMLElement>("[data-fine]");
-      const items = root.querySelectorAll<HTMLElement>("[data-item]");
-      if (!heading || !card) return;
+    let cancelIo: (() => void) | undefined;
+    let split: WordSplit | null = null;
+    const anims: Animation[] = [];
 
-      const reveal = () => {
-        if (cancelled) return;
-        try {
-          const split = SplitText.create(heading, { type: "words", mask: "words" });
-          const masks = split.words
-            .map((w) => w.parentElement)
-            .filter((p): p is HTMLElement => !!p && p !== heading);
-          gsap.set(masks, { paddingBottom: "0.18em", marginBottom: "-0.18em" });
-          gsap
-            .timeline({
-              scrollTrigger: { trigger: root, start: "top 60%", once: true },
-            })
-            .from(
-              split.words,
-              {
-                yPercent: 130,
-                duration: 0.5,
-                ease: "power4.out",
-                stagger: 0.05,
-                onComplete: () => split.revert(),
-              },
-              0,
-            )
-            .from(
-              card,
-              { y: 28, autoAlpha: 0, duration: 0.5, ease: "power3.out" },
-              0.2,
-            )
-            .from(
-              items,
-              { y: 14, autoAlpha: 0, duration: 0.35, ease: "power3.out", stagger: 0.06 },
-              0.45,
-            )
-            .from(
-              cta,
-              { y: 16, autoAlpha: 0, duration: 0.35, ease: "power3.out" },
-              0.75,
-            )
-            .from(
-              fine,
-              { y: 10, autoAlpha: 0, duration: 0.3, ease: "power3.out" },
-              0.85,
-            )
-            // the stickers slap on last
-            .from(
-              beta,
-              { scale: 0, autoAlpha: 0, duration: 0.4, ease: "back.out(2)" },
-              0.55,
-            )
-            .from(
-              money,
-              { scale: 0, autoAlpha: 0, duration: 0.45, ease: "back.out(2)" },
-              0.7,
-            );
-        } catch {
-          // Motion must never leave content hidden (§6.6).
-          gsap.set([heading, card, beta, money, cta, fine, ...items], {
-            autoAlpha: 1,
-            y: 0,
-            scale: 1,
-          });
+    const heading = root.querySelector<HTMLElement>("[data-heading]");
+    const card = root.querySelector<HTMLElement>("[data-card]");
+    const beta = root.querySelector<HTMLElement>("[data-beta]");
+    const money = root.querySelector<HTMLElement>("[data-money]");
+    const cta = root.querySelector<HTMLElement>("[data-cta]");
+    const fine = root.querySelector<HTMLElement>("[data-fine]");
+    const items = Array.from(root.querySelectorAll<HTMLElement>("[data-item]"));
+    if (!heading || !card) return;
+
+    const revealEls = [heading, card, beta, money, cta, fine, ...items].filter(
+      (el): el is HTMLElement => !!el,
+    );
+    const clearInline = (el: HTMLElement) => {
+      el.style.removeProperty("opacity");
+      el.style.removeProperty("transform");
+      el.style.removeProperty("visibility");
+    };
+
+    const reveal = () => {
+      if (cancelled) return;
+      try {
+        split = splitWords(heading);
+        const words = split.words;
+        // From-states paint now, not when the trigger fires (gsap.from's
+        // immediateRender parity): everything holds hidden until then.
+        for (const w of words) park(w, { transform: "translateY(130%)" });
+        park(card, { opacity: 0, transform: "translateY(28px)" });
+        for (const item of items) {
+          park(item, { opacity: 0, transform: "translateY(14px)" });
         }
-      };
+        if (cta) park(cta, { opacity: 0, transform: "translateY(16px)" });
+        if (fine) park(fine, { opacity: 0, transform: "translateY(10px)" });
+        if (beta) park(beta, { opacity: 0, transform: "scale(0)" });
+        if (money) park(money, { opacity: 0, transform: "scale(0)" });
 
-      Promise.race([
-        document.fonts.ready,
-        new Promise((resolve) => setTimeout(resolve, 600)),
-      ]).then(reveal);
-    }, root);
+        // visibility:"hidden" rides each fading from-keyframe so
+        // fill:"backwards" keeps the element unhoverable/unclickable through
+        // its delay and flips it visible the instant its tween starts (CSS
+        // visibility interpolation) — gsap autoAlpha parity. Without it the
+        // transparent CTA is hover-active during its 0.75s delay, and a
+        // hover mid-reveal would cancel the card's running reveal via playTo.
+        cancelIo = onceInView(root, 60, () => {
+          if (cancelled) return;
+          try {
+            for (const [i, w] of words.entries()) {
+              anims.push(
+                playFrom(
+                  w,
+                  { transform: "translateY(130%)" },
+                  { duration: 0.5, delay: i * 0.05, ease: EASE.out4 },
+                ),
+              );
+            }
+            // Un-split once the last word lands, like SplitText's onComplete
+            // revert did.
+            anims[anims.length - 1]?.finished
+              .then(() => {
+                split?.revert();
+                split = null;
+              })
+              .catch(() => {});
+            anims.push(
+              playFrom(
+                card,
+                {
+                  opacity: 0,
+                  transform: "translateY(28px)",
+                  visibility: "hidden",
+                },
+                { duration: 0.5, delay: 0.2, ease: EASE.out3 },
+              ),
+            );
+            for (const [i, item] of items.entries()) {
+              anims.push(
+                playFrom(
+                  item,
+                  {
+                    opacity: 0,
+                    transform: "translateY(14px)",
+                    visibility: "hidden",
+                  },
+                  { duration: 0.35, delay: 0.45 + i * 0.06, ease: EASE.out3 },
+                ),
+              );
+            }
+            if (cta) {
+              anims.push(
+                playFrom(
+                  cta,
+                  {
+                    opacity: 0,
+                    transform: "translateY(16px)",
+                    visibility: "hidden",
+                  },
+                  { duration: 0.35, delay: 0.75, ease: EASE.out3 },
+                ),
+              );
+            }
+            if (fine) {
+              anims.push(
+                playFrom(
+                  fine,
+                  {
+                    opacity: 0,
+                    transform: "translateY(10px)",
+                    visibility: "hidden",
+                  },
+                  { duration: 0.3, delay: 0.85, ease: EASE.out3 },
+                ),
+              );
+            }
+            // the stickers slap on last
+            if (beta) {
+              anims.push(
+                playFrom(
+                  beta,
+                  { opacity: 0, transform: "scale(0)", visibility: "hidden" },
+                  { duration: 0.4, delay: 0.55, ease: EASE.backOut2 },
+                ),
+              );
+            }
+            if (money) {
+              anims.push(
+                playFrom(
+                  money,
+                  { opacity: 0, transform: "scale(0)", visibility: "hidden" },
+                  { duration: 0.45, delay: 0.7, ease: EASE.backOut2 },
+                ),
+              );
+            }
+          } catch {
+            // This callback fires async (IO), outside the try below — it
+            // needs its own fail-open: motion must never leave content
+            // hidden (§6.6). Cancelling parks nothing filled forwards, so
+            // everything snaps to its natural, visible CSS state.
+            for (const a of anims) a.cancel();
+            split?.revert();
+            split = null;
+            for (const el of revealEls) clearInline(el);
+          }
+        });
+      } catch {
+        // Motion must never leave content hidden (§6.6).
+        split?.revert();
+        split = null;
+        for (const el of revealEls) clearInline(el);
+      }
+    };
+
+    Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, 600)),
+    ]).then(reveal);
 
     return () => {
       cancelled = true;
-      ctx.revert();
+      cancelIo?.();
+      for (const a of anims) a.cancel();
+      split?.revert();
+      split = null;
+      for (const el of revealEls) clearInline(el);
     };
   }, []);
 
@@ -118,7 +204,8 @@ export function PricingSection() {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+      return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const card = root.querySelector<HTMLElement>("[data-card]");
@@ -126,9 +213,17 @@ export function PricingSection() {
     if (!card || !cta) return;
 
     const enter = () =>
-      gsap.to(card, { scale: 1.02, duration: 0.15, ease: "power2.out" });
+      playTo(
+        card,
+        { transform: "scale(1.02)" },
+        { duration: 0.15, ease: EASE.out2 },
+      );
     const leave = () =>
-      gsap.to(card, { scale: 1, duration: 0.2, ease: "power2.out" });
+      playTo(
+        card,
+        { transform: "scale(1)" },
+        { duration: 0.2, ease: EASE.out2 },
+      );
     cta.addEventListener("mouseenter", enter);
     cta.addEventListener("mouseleave", leave);
     return () => {

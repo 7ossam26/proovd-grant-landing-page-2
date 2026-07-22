@@ -1,67 +1,458 @@
-/* "This is Evan" → "Has an Idea" — no-fill section on the #FAFAFA page
-   (§1 mode-none). The statement overlays the section, then hands off to the
-   detail layout via a photo flight. */
+/* Evan scroll story — styles ported from the "Proovd Scroll Storyyy"
+   reference. Two integration rules:
+   · --u replaces the reference's fluid ROOT font-size (the 1440x800 design
+     zooms uniformly, width- or height-limited): every reference `Xrem`
+     becomes `calc(X * var(--u))` so the zoom stays scoped to this section.
+   · colors resolve through proovd.css tokens; the reference's light theme
+     is exactly the page's mode-none set. #011E0B is the one deliberate
+     literal — the navbar's nav-only color (navbar.module.css), so the fixed
+     bar blends over the product story's dark surface. */
 
 .section {
+  --u: max(min(1.1111vw, 2vh), 9px);
+  --ev-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --theme-fade: 0.8s var(--ev-ease);
+  /* theme surfaces — the product story flips these to the dark set */
+  --ev-bg: var(--white);
+  --ev-ink: var(--dark);
+  --ev-ink-strong: var(--darker);
+  --ev-mode-ink: var(--darker);
+  --ev-track: var(--white);
+  --ev-thumb: var(--dark);
+  --ev-thumb-ink: var(--mint);
   position: relative;
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  padding: clamp(5.5rem, 9vw, 8.5rem) clamp(1.25rem, 3.5vw, 3.5rem)
-           clamp(2.5rem, 5vw, 4.5rem);
+  background: var(--ev-bg);
+  color: var(--ev-ink);
+  line-height: 1.6;
+  transition:
+    background-color var(--theme-fade),
+    color var(--theme-fade);
 }
 
-/* ── phone scroll model ───────────────────────────────────────────────────
-   The section pins (position: sticky — native, composited) inside a wrapper
-   tall enough to give each chapter its own stretch of REAL scroll room.
-   Scrolling stays 100% native; invisible markers give every chapter a snap
-   stop, and a passive scroll listener steps the carousel. On desktop the
-   wrapper adds nothing. */
+.productTheme {
+  --ev-bg: #011e0b;
+  --ev-ink: var(--mint);
+  --ev-ink-strong: var(--white);
+  --ev-mode-ink: var(--mint);
+  --ev-track: #011e0b;
+  --ev-thumb: var(--mint);
+  --ev-thumb-ink: var(--darker);
+}
 
-.pinSpace {
+/* ── two-column walkthrough ─────────────────────────────────────────── */
+
+.walk {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(4.375 * var(--u));
+  align-items: start;
+  max-width: calc(90 * var(--u));
+  margin: 0 auto;
+  padding: 0 calc(3 * var(--u)) 20vh;
+}
+
+.mediaGroup {
+  position: sticky;
+  top: calc(50vh - 16.4 * var(--u)); /* JS refines from the real nav height */
+}
+
+.walkMedia {
+  width: min(100%, calc(70vh * 1.345));
+  aspect-ratio: 717 / 533; /* the photos' ratio; JS syncs to real dims */
   position: relative;
 }
 
-.snapMark {
+.stampBg {
+  position: absolute;
+  inset: 0;
+  background: var(--mint);
+  -webkit-mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
+  mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
+}
+
+/* scenes crossfade on a plateau: solid while a step reads, fading only
+   between steps (JS drives opacity from --v; hidden once the peel is live) */
+.scene {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(calc(0.96 + 0.04 * var(--v, 0)));
+  pointer-events: none;
+  transition:
+    opacity 0.6s var(--ev-ease),
+    transform 0.6s var(--ev-ease);
+  -webkit-mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
+  mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
+}
+
+.sceneImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%; /* the global img { height: auto } must not win here */
+  object-fit: cover;
+}
+
+.peelMount {
+  position: absolute;
+  inset: -15%; /* room for the curl to roll past the stamp edge */
+}
+
+.peelOn .scene {
   display: none;
 }
 
-@media (hover: none) {
-  .pinSpace {
-    --chapter-step: 55svh; /* scroll distance per chapter */
-    /* one viewport for the section + 4 extra chapters of travel */
-    height: calc(100svh + 4 * var(--chapter-step));
-  }
+/* progress: the bordered treatment — brand border + 5% fill + brand fill */
+.mediaCap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(1 * var(--u));
+  margin-top: calc(1 * var(--u));
+  min-height: calc(2.125 * var(--u));
+}
 
+.ticks {
+  display: flex;
+  gap: calc(0.375 * var(--u));
+  flex: none;
+}
+
+.tick {
+  width: calc(1.5 * var(--u));
+  height: calc(0.5 * var(--u));
+  border: calc(0.125 * var(--u)) solid var(--brand);
+  border-radius: var(--radius);
+  background: var(--brand-5);
+  overflow: hidden;
+  position: relative;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.tick::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brand);
+  transform: scaleX(var(--tf, 0));
+  transform-origin: left;
+}
+
+.stepcount {
+  font-weight: 700;
+  font-size: calc(0.75 * var(--u));
+  color: var(--grey);
+  flex: none;
+  display: flex;
+  align-items: baseline;
+}
+
+.rollBox {
+  height: 1.1em;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.roll {
+  display: block;
+  will-change: transform;
+}
+
+.roll > span {
+  display: block;
+  height: 1.1em;
+  line-height: 1.1em;
+}
+
+/* ── steps column ───────────────────────────────────────────────────── */
+
+.step {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: calc(3.125 * var(--u)) 0;
+}
+
+.step + .step {
+  min-height: 82vh;
+}
+
+.step:first-child {
+  /* centers step 1's text on load (nav accounted) */
+  min-height: calc(100vh - 8.75 * var(--u));
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: calc(0.875 * var(--u));
+  margin-bottom: calc(1 * var(--u));
+}
+
+.avatar {
+  width: calc(2.75 * var(--u));
+  height: calc(2.75 * var(--u));
+  border-radius: var(--radius);
+  background: var(--mint);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: calc(1.125 * var(--u));
+  color: var(--dark);
+  flex: none;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.kickerLabel {
+  font-weight: 500;
+  font-size: calc(1.25 * var(--u));
+  color: var(--ev-ink);
+  transition: color var(--theme-fade);
+}
+
+.headline {
+  font-weight: 900;
+  color: var(--ev-ink-strong);
+  font-size: calc(4 * var(--u));
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin: 0 0 calc(1.125 * var(--u));
+  max-width: 14ch;
+  transition: color var(--theme-fade);
+}
+
+/* breathing room so ascenders/descenders aren't clipped by the word mask */
+.w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding: 0.22em 0.1em;
+  margin: -0.22em -0.1em;
+}
+
+.w > span {
+  display: inline-block;
+  will-change: transform;
+  transform-origin: 0% 100%;
+}
+
+.copyBody {
+  font-size: calc(1.25 * var(--u));
+  font-weight: 500;
+  max-width: 44ch;
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ev-ink);
+  will-change: transform;
+  transition: color var(--theme-fade);
+}
+
+.copyBody mark {
+  color: inherit;
+  padding: 0.02em 0.12em;
+  margin: -0.02em -0.06em;
+  border-radius: var(--radius);
+  background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--brand) 35%, transparent),
+      color-mix(in srgb, var(--brand) 35%, transparent)
+    )
+    no-repeat left center;
+  /* unclamped top — the sweep overshoots like a real marker */
+  background-size: calc(max(var(--mk, 0), 0) * 100%) 88%;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ── story mode toggle — pinned bottom-center while the story is on ── */
+
+.modeDock {
+  position: sticky;
+  bottom: calc(1.5 * var(--u));
+  z-index: 40;
+  width: max-content;
+  margin: 0 auto;
+}
+
+.mode {
+  display: inline-flex;
+  border: calc(0.125 * var(--u)) solid var(--brand);
+  border-radius: var(--radius);
+  background: var(--ev-track);
+  transition: background-color var(--theme-fade);
+}
+
+.modeBtn {
+  font-family: inherit;
+  font-weight: 700;
+  font-size: calc(1.0625 * var(--u));
+  padding: calc(0.9375 * var(--u)) calc(1.75 * var(--u));
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ev-mode-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.2s var(--ev-ease),
+    color 0.2s var(--ev-ease);
+}
+
+.modeBtn.isOn {
+  background: var(--ev-thumb);
+  color: var(--ev-thumb-ink);
+}
+
+.modeBtn:not(.isOn):hover {
+  background: var(--brand-5);
+}
+
+/* ── phone: single column, media pinned under the fixed nav ─────────── */
+
+@media (max-width: 900px) {
   .section {
-    position: sticky;
-    top: 0;
-    min-height: auto;
-    height: 100svh;
+    /* phone reference is 390px wide; tablets cap so type never balloons */
+    --u: clamp(14px, 4.1026vw, 19px);
   }
 
-  .snapMark {
+  .walk {
     display: block;
+    max-width: none;
+    padding: 0 calc(1.75 * var(--u)) 18vh;
+  }
+
+  /* media breaks out of the text gutters so the photo runs nearly
+     full-bleed; it pins below the (measured) navbar with its own surface */
+  .mediaGroup {
+    top: calc(3.5 * var(--u)); /* JS refines from the real nav height */
+    z-index: 5;
+    background: var(--ev-bg);
+    padding: calc(0.625 * var(--u)) 0 calc(0.375 * var(--u));
+    margin: 0 calc(-1 * var(--u));
+    transition: background-color var(--theme-fade);
+  }
+
+  .walkMedia {
+    margin: 0 auto;
+    overflow: hidden;
+    aspect-ratio: 1.2; /* phones crop a touch taller than the photos */
+    width: min(100%, calc(50vh * 1.2));
+  }
+
+  .peelMount {
+    inset: 0;
+  }
+
+  .mediaCap {
+    margin: calc(0.625 * var(--u)) calc(1 * var(--u)) 0;
+    min-height: calc(1.5 * var(--u));
+  }
+
+  .step {
+    min-height: 56vh;
+    padding: calc(1.5 * var(--u)) 0;
+  }
+
+  .step + .step {
+    min-height: 56vh;
+  }
+
+  .step:first-child {
+    /* step 1 hugs the image on load instead of floating mid-gap */
+    min-height: 42vh;
+  }
+
+  .headline {
+    font-size: calc(2.3 * var(--u));
+  }
+
+  .copyBody {
+    font-size: calc(1.0625 * var(--u));
+  }
+
+  .kickerLabel {
+    font-size: calc(1.0625 * var(--u));
+  }
+
+  .avatar {
+    width: calc(2.25 * var(--u));
+    height: calc(2.25 * var(--u));
+  }
+
+  /* compact segmented switch — a thumb sliding in a track, not two buttons */
+  .modeDock {
+    bottom: calc(0.875 * var(--u));
+    max-width: calc(100vw - 1.5 * var(--u));
+  }
+
+  .mode {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    width: max-content;
+    max-width: 100%;
+    padding: calc(0.25 * var(--u));
+  }
+
+  .mode::before {
+    content: "";
     position: absolute;
-    left: 0;
-    width: 1px;
-    height: var(--chapter-step);
-    pointer-events: none;
-    scroll-snap-align: start;
-    scroll-snap-stop: always; /* a fling settles one chapter at a time */
+    top: calc(0.25 * var(--u));
+    bottom: calc(0.25 * var(--u));
+    left: calc(0.25 * var(--u));
+    width: calc(50% - 0.25 * var(--u));
+    background: var(--ev-thumb);
+    border-radius: var(--radius);
+    transition:
+      transform 0.25s var(--ev-ease),
+      background-color var(--theme-fade);
+  }
+
+  .productOn::before {
+    transform: translateX(100%);
+  }
+
+  .modeBtn {
+    font-size: calc(0.875 * var(--u));
+    padding: calc(0.65 * var(--u)) calc(1.1 * var(--u));
+    position: relative;
+    z-index: 1;
+  }
+
+  .modeBtn.isOn {
+    background: transparent;
   }
 }
 
-/* ── opening statement (overlay) ─────────────────────────────────────── */
+/* ── pre-JS / no-JS: everything readable and assembled. The engine only
+   hides/moves things (inline styles) after it adds .isLive ─────────── */
+
+/* ── opening statement — overlays the story's first viewport ─────────── */
 
 .statementWrap {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100svh;
+  z-index: 45; /* above the walkthrough and the mode dock while it plays */
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: inherit;
-  pointer-events: none;
+  padding: 0 calc(3 * var(--u));
+  background: var(--ev-bg);
+  transition: background-color var(--theme-fade);
 }
 
 .statement {
@@ -74,7 +465,7 @@
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.01em;
-  color: var(--dark);
+  color: var(--ev-ink);
   text-align: center;
   margin: 0;
 }
@@ -91,268 +482,52 @@
 .photo {
   display: block;
   width: 100%;
-  height: 100%;
+  height: 100%; /* the global img { height: auto } must not win here */
   object-fit: cover;
 }
 
-/* ── segmented toggle — tab-drawer treatment (§1 darker green) ────────── */
-
-.toggle {
-  display: flex;
-  align-self: flex-start;
-  background: var(--darker);
-  border: 2px solid var(--darker);
-  border-radius: var(--radius);
-  margin-bottom: clamp(1.5rem, 3vw, 2.75rem);
-  transform: translateY(clamp(1.75rem, 3.5vw, 3.25rem));
+.section:not(.isLive) .statementWrap {
+  display: none; /* no JS: the story stands on its own */
 }
 
-.tab {
-  background: transparent;
-  border: none;
-  border-radius: var(--radius);
-  color: var(--white);
-  font-weight: 700;
-  font-size: clamp(0.875rem, 1.05vw, 1.25rem);
-  padding: 0.75em 1.6em;
-  min-height: var(--touch);
-  transition: background-color 0.25s ease, color 0.25s ease;
+.section:not(.isLive) .modeDock {
+  display: none;
 }
 
-.tabActive {
-  background: var(--mint);
-  color: var(--darker);
+.section:not(.isLive) .scene[data-i="0"] {
+  opacity: 1;
 }
 
-/* ── detail layout ────────────────────────────────────────────────────── */
-
-.detail {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
+.section:not(.isLive) .copyBody mark {
+  background-size: 100% 88%;
 }
 
-.grid {
-  display: grid;
-  gap: clamp(1.5rem, 4vw, 4rem);
-  align-items: center;
-  flex: 1;
-}
+/* ── reduced motion: static, fully-assembled states; instant page flips ── */
 
-@media (min-width: 900px) {
-  .grid {
-    grid-template-columns: 1.1fr 1fr;
-    gap: clamp(2rem, 6vw, 7rem);
-    /* bias the whole moment upward a touch */
-    margin-bottom: clamp(1.5rem, 3.5vh, 3rem);
+@media (prefers-reduced-motion: reduce) {
+  .section *,
+  .section *::before,
+  .section *::after {
+    transition: none !important;
+    animation: none !important;
   }
 
-  /* the flow layout only (statement + phone untouched): photo a step
-     smaller, titles a step quieter, body copy a step larger */
-  .photoFrame {
-    width: 90%;
+  .section .w > span,
+  .section .copyBody,
+  .section .kicker {
+    transform: none !important;
+    opacity: 1 !important;
   }
 
-  .ideaTitle {
-    --title-size: clamp(2.5rem, 5.2vw, 7.75rem);
+  .section .copyBody mark {
+    background-size: 100% 88% !important;
   }
 
-  .ideaBody {
-    --body-size: 1.5rem; /* 24px flat on laptop */
-  }
-}
-
-.grid > * {
-  min-width: 0;
-}
-
-/* the frame is the card stack: the outgoing photo snapshot sits in it while
-   the incoming one slaps down on top */
-.photoFrame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 13 / 10;
-}
-
-.ideaPhoto {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: var(--radius);
-}
-
-/* the outgoing title+body snapshot overlays here while the new block enters */
-.swap {
-  position: relative;
-}
-
-.col {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.evanRow {
-  display: flex;
-  align-items: flex-end; /* name sits on the photo's bottom edge */
-  gap: clamp(0.5rem, 0.9vw, 1.125rem);
-  margin-top: clamp(1rem, 2vw, 2rem);
-  margin-bottom: clamp(1.5rem, 3vw, 3rem);
-}
-
-.thumb {
-  width: clamp(3rem, 4.2vw, 5.25rem);
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: var(--radius);
-}
-
-.evanName {
-  font-size: clamp(1.25rem, 2vw, 2.5rem);
-  font-weight: 700;
-  line-height: 1.1; /* keeps the baseline close to the photo's bottom edge */
-  color: var(--dark);
-}
-
-/* Per-slide fonts shrink (--title-scale / --body-scale) so longer copy fits
-   the SAME footprint as slide one — the block never grows and pushes the
-   layout around. min-heights reserve that footprint for shorter slides too. */
-
-.ideaTitle {
-  --title-size: clamp(2.75rem, 5.8vw, 8.75rem);
-  font-size: calc(var(--title-size) * var(--title-scale, 1));
-  font-weight: 900;
-  line-height: 1.05;
-  letter-spacing: -0.01em;
-  color: var(--darker); /* #012D10 */
-  margin: 0 0 clamp(1.5rem, 2.8vw, 3rem);
-}
-
-.ideaBody {
-  --body-size: clamp(1rem, 1.35vw, 1.625rem);
-  font-size: calc(var(--body-size) * var(--body-scale, 1));
-  font-weight: 500;
-  line-height: 1.5;
-  color: var(--dark);
-  max-width: min(100%, clamp(22rem, 36vw, 40rem));
-  margin: 0;
-}
-
-/* chapter progress — a full-bleed bar hugging the very bottom edge */
-.progress {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: clamp(0.5rem, 0.8vw, 0.875rem);
-  background: var(--mint);
-}
-
-.progressFill {
-  display: block;
-  height: 100%;
-  background: var(--brand);
-  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* ── sticker cursor (mouse devices only) ─────────────────────────────── */
-
-/* while the sticker is shown the real pointer disappears everywhere in the
-   section, children included; over controls (toggle tabs etc.) the sticker
-   hides, the class comes off, and the normal pointer returns */
-.cursorOn,
-.cursorOn * {
-  cursor: none !important;
-}
-
-.tab {
-  cursor: pointer;
-}
-
-.cursor {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 800; /* over the slides, under the navbar */
-  pointer-events: none;
-  opacity: 0; /* gsap autoAlpha owns visibility from here */
-  visibility: hidden;
-}
-
-/* same clothes as the hero's Start button: white face, brand border */
-.cursorBadge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: clamp(3.5rem, 4.2vw, 5.25rem);
-  aspect-ratio: 1;
-  border-radius: 3px;
-  background: var(--white);
-  color: var(--dark);
-  border: 3px solid var(--brand);
-  transform: rotate(-8deg); /* a little peel-off tilt */
-}
-
-.cursorArrow {
-  width: 45%;
-  height: 45%;
-}
-
-@media (hover: none), (pointer: coarse) {
-  .cursor {
-    display: none;
-  }
-}
-
-/* ── phone ────────────────────────────────────────────────────────────── */
-
-@media (max-width: 700px) {
-  /* statement: same one-line composition as desktop, scaled to fit */
-  .statement {
-    flex-wrap: nowrap;
-    font-size: clamp(1.75rem, 8.25vw, 2.375rem);
-    gap: clamp(0.5rem, 2.5vw, 0.875rem);
+  .section .scene {
+    transform: none !important;
   }
 
-  .photoMask {
-    width: clamp(6rem, 30vw, 8.75rem);
-  }
-
-  /* toggle spans the full width at the top, no drop-down offset */
-  .toggle {
-    align-self: stretch;
-    transform: none;
-    margin-bottom: clamp(2rem, 8vw, 3rem);
-  }
-
-  .tab {
-    flex: 1;
-    font-size: clamp(0.8125rem, 3.5vw, 1rem);
-  }
-
-  .photoFrame {
-    aspect-ratio: 11 / 10; /* a touch taller than the desktop 13/10 crop */
-  }
-
-  .evanRow {
-    margin-bottom: clamp(1rem, 4vw, 1.5rem);
-  }
-
-  .thumb {
-    width: clamp(2.25rem, 10.5vw, 3rem);
-  }
-
-  .evanName {
-    font-size: clamp(1rem, 4.75vw, 1.375rem);
-  }
-
-
-  .ideaTitle {
-    --title-size: clamp(2.25rem, 11vw, 3.25rem);
-  }
-
-  .ideaBody {
-    --body-size: clamp(1rem, 4.5vw, 1.25rem);
+  .statementWrap {
+    display: none !important; /* land directly on the story */
   }
 }

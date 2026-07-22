@@ -7,18 +7,11 @@
   min-height: 100svh;
   display: flex;
   align-items: center;
-  background: #011E0B; /* continuous with the Risk panel until the reveal */
+  background: #011e0b; /* continuous with the Risk panel until the reveal */
   overflow: hidden;
 }
 
-/* touch: a native snap stop like its siblings */
-@media (hover: none) {
-  .section {
-    scroll-snap-align: start;
-  }
-}
-
-/* the expanding window (clip-path animated by gsap) */
+/* the expanding reveal window */
 .mask {
   position: absolute;
   inset: 0;
@@ -28,8 +21,8 @@
 .bg {
   position: absolute;
   inset: 0;
-  background: url("/assets/background-calendar-desktop.webp") center / cover
-    no-repeat;
+  background:
+    url("/assets/background-calendar-desktop.webp") center / cover no-repeat;
 }
 
 @media (max-width: 700px) {

@@ -12,17 +12,10 @@
   justify-content: center;
   text-align: center;
   gap: clamp(1.75rem, 3.2vw, 3.25rem);
-  background: #011E0B; /* same color as the navbar */
+  background: #011e0b; /* same color as the navbar */
   /* tighter block padding — the content gets the room instead */
   padding: clamp(4.5rem, 7vw, 7rem) clamp(1.25rem, 3.5vw, 3.5rem);
   overflow: hidden;
-}
-
-/* touch: a native snap stop like its siblings */
-@media (hover: none) {
-  .section {
-    scroll-snap-align: start;
-  }
 }
 
 .title {

@@ -1,12 +1,8 @@
 "use client";
 
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useLayoutEffect, useRef } from "react";
-import { glideGate, glideTo, intentTick } from "./scroll-glide";
+import { easeFn } from "@/lib/motion";
 import styles from "./creators-section.module.css";
-
-gsap.registerPlugin(ScrollTrigger);
 
 type Platform = "tiktok" | "youtube" | "instagram";
 
@@ -21,18 +17,114 @@ const CREATORS: Array<{
   bg: string;
   fg: "dark" | "light";
 }> = [
-  { img: "/assets/Creator-1.webp", niche: "Lifestyle", handle: "@liv.days", followers: "96K", platform: "instagram", bg: "#86A28C", fg: "light" },
-  { img: "/assets/Creator-2.webp", niche: "Streaming", handle: "@nova.plays", followers: "143K", platform: "tiktok", bg: "#D3F8C5", fg: "dark" },
-  { img: "/assets/Creator-3.webp", niche: "Fitness", handle: "@formcheck", followers: "312K", platform: "youtube", bg: "#E9FFE1", fg: "dark" },
-  { img: "/assets/Frame 4.webp", niche: "Music", handle: "@spinbackk", followers: "88K", platform: "tiktok", bg: "#D6F0FF", fg: "dark" },
-  { img: "/assets/Creator-5.webp", niche: "Music", handle: "@miso.mixes", followers: "205K", platform: "instagram", bg: "#41ED98", fg: "dark" },
-  { img: "/assets/Creator-6.webp", niche: "Fashion", handle: "@LM_styles", followers: "228K", platform: "tiktok", bg: "#F5FA9F", fg: "dark" },
-  { img: "/assets/Creator-7.webp", niche: "Branding", handle: "@brandkid", followers: "74K", platform: "youtube", bg: "#013F17", fg: "light" },
-  { img: "/assets/Creator-8.webp", niche: "Fashion", handle: "@inkandlenses", followers: "156K", platform: "instagram", bg: "#F2FF8B", fg: "dark" },
-  { img: "/assets/Creator-9.webp", niche: "Design", handle: "@designbyrei", followers: "119K", platform: "tiktok", bg: "#86A28C", fg: "light" },
-  { img: "/assets/Creator-10.webp", niche: "Lifestyle", handle: "@dailydose.d", followers: "182K", platform: "instagram", bg: "#012D10", fg: "light" },
-  { img: "/assets/Creator-11.webp", niche: "Fitness", handle: "@repsbyluca", followers: "267K", platform: "youtube", bg: "#EEF4EE", fg: "dark" },
-  { img: "/assets/Creator-12.webp", niche: "Streaming", handle: "@streamsz", followers: "331K", platform: "tiktok", bg: "#2FE58A", fg: "dark" },
+  {
+    img: "/assets/Creator-1.webp",
+    niche: "Lifestyle",
+    handle: "@liv.days",
+    followers: "96K",
+    platform: "instagram",
+    bg: "#86A28C",
+    fg: "light",
+  },
+  {
+    img: "/assets/Creator-2.webp",
+    niche: "Streaming",
+    handle: "@nova.plays",
+    followers: "143K",
+    platform: "tiktok",
+    bg: "#D3F8C5",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-3.webp",
+    niche: "Fitness",
+    handle: "@formcheck",
+    followers: "312K",
+    platform: "youtube",
+    bg: "#E9FFE1",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Frame 4.webp",
+    niche: "Music",
+    handle: "@spinbackk",
+    followers: "88K",
+    platform: "tiktok",
+    bg: "#D6F0FF",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-5.webp",
+    niche: "Music",
+    handle: "@miso.mixes",
+    followers: "205K",
+    platform: "instagram",
+    bg: "#41ED98",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-6.webp",
+    niche: "Fashion",
+    handle: "@LM_styles",
+    followers: "228K",
+    platform: "tiktok",
+    bg: "#F5FA9F",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-7.webp",
+    niche: "Branding",
+    handle: "@brandkid",
+    followers: "74K",
+    platform: "youtube",
+    bg: "#013F17",
+    fg: "light",
+  },
+  {
+    img: "/assets/Creator-8.webp",
+    niche: "Fashion",
+    handle: "@inkandlenses",
+    followers: "156K",
+    platform: "instagram",
+    bg: "#F2FF8B",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-9.webp",
+    niche: "Design",
+    handle: "@designbyrei",
+    followers: "119K",
+    platform: "tiktok",
+    bg: "#86A28C",
+    fg: "light",
+  },
+  {
+    img: "/assets/Creator-10.webp",
+    niche: "Lifestyle",
+    handle: "@dailydose.d",
+    followers: "182K",
+    platform: "instagram",
+    bg: "#012D10",
+    fg: "light",
+  },
+  {
+    img: "/assets/Creator-11.webp",
+    niche: "Fitness",
+    handle: "@repsbyluca",
+    followers: "267K",
+    platform: "youtube",
+    bg: "#EEF4EE",
+    fg: "dark",
+  },
+  {
+    img: "/assets/Creator-12.webp",
+    niche: "Streaming",
+    handle: "@streamsz",
+    followers: "331K",
+    platform: "tiktok",
+    bg: "#2FE58A",
+    fg: "dark",
+  },
 ];
 
 const INK = { dark: "#013F17", light: "#E9FFE1" } as const;
@@ -42,7 +134,12 @@ const INK = { dark: "#013F17", light: "#E9FFE1" } as const;
 function PlatformLogo({ platform }: { platform: Platform }) {
   if (platform === "youtube") {
     return (
-      <svg className={styles.logo} viewBox="0 0 576 512" aria-label="YouTube" role="img">
+      <svg
+        className={styles.logo}
+        viewBox="0 0 576 512"
+        aria-label="YouTube"
+        role="img"
+      >
         <path
           fill="#FF0000"
           d="M549.655 124.083c-6.281-23.65-24.787-42.276-48.284-48.597C458.781 64 288 64 288 64S117.22 64 74.629 75.486c-23.497 6.322-42.003 24.947-48.284 48.597-11.412 42.867-11.412 132.305-11.412 132.305s0 89.438 11.412 132.305c6.281 23.65 24.787 41.5 48.284 47.821C117.22 448 288 448 288 448s170.78 0 213.371-11.486c23.497-6.321 42.003-24.171 48.284-47.821 11.412-42.867 11.412-132.305 11.412-132.305s0-89.438-11.412-132.305z"
@@ -53,7 +150,12 @@ function PlatformLogo({ platform }: { platform: Platform }) {
   }
   if (platform === "instagram") {
     return (
-      <svg className={styles.logo} viewBox="0 0 448 512" aria-label="Instagram" role="img">
+      <svg
+        className={styles.logo}
+        viewBox="0 0 448 512"
+        aria-label="Instagram"
+        role="img"
+      >
         <defs>
           <linearGradient id="ig-grad" x1="0" y1="1" x2="1" y2="0">
             <stop offset="0" stopColor="#FDC468" />
@@ -70,7 +172,12 @@ function PlatformLogo({ platform }: { platform: Platform }) {
   }
   // TikTok: the app tile — black rounded square, layered cyan/red/white note
   return (
-    <svg className={styles.logo} viewBox="0 0 512 512" aria-label="TikTok" role="img">
+    <svg
+      className={styles.logo}
+      viewBox="0 0 512 512"
+      aria-label="TikTok"
+      role="img"
+    >
       <rect width="512" height="512" rx="110" fill="#000000" />
       <g transform="translate(80, 64) scale(0.72)">
         <path
@@ -105,9 +212,15 @@ export function CreatorsSection() {
     const wheel = root.querySelector<HTMLElement>("[data-wheel]");
     const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-card]"));
     if (!wheel || !cards.length) return;
-    const photos = cards.map((c) => c.querySelector<HTMLElement>("[data-photo]"));
-    const strips = cards.map((c) => c.querySelector<HTMLElement>("[data-strip]"));
-    const panels = cards.map((c) => c.querySelector<HTMLElement>("[data-panel]"));
+    const photos = cards.map((c) =>
+      c.querySelector<HTMLElement>("[data-photo]"),
+    );
+    const strips = cards.map((c) =>
+      c.querySelector<HTMLElement>("[data-strip]"),
+    );
+    const panels = cards.map((c) =>
+      c.querySelector<HTMLElement>("[data-panel]"),
+    );
 
     const N = cards.length;
     // spacing = R × SLOT, so the tighter circle needs a wider slot angle to
@@ -171,98 +284,114 @@ export function CreatorsSection() {
         el.style.width = `${w}px`;
         el.style.height = `${cardH}px`;
         el.style.zIndex = f > 0.01 ? "6" : "2";
-        gsap.set(el, {
-          // left edge anchored — the card unfolds rightward like the mock
-          x: cx + R * Math.cos(rad) - compW / 2,
-          y: cy + R * Math.sin(rad) - cardH / 2,
-          rotation: th * 0.8 * (1 - f), // straightens fully as it unfolds
-        });
+        // left edge anchored — the card unfolds rightward like the mock;
+        // translate before rotate, the same transform order as before
+        const x = cx + R * Math.cos(rad) - compW / 2;
+        const y = cy + R * Math.sin(rad) - cardH / 2;
+        const rot = th * 0.8 * (1 - f); // straightens fully as it unfolds
+        el.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
         const strip = strips[i];
         if (strip) strip.style.opacity = String(Math.max(0, 1 - f * 2.5));
         const panel = panels[i];
-        if (panel) gsap.set(panel, { x: (1 - f) * panelW }); // slides in, opaque
+        if (panel) {
+          // slides in, opaque
+          panel.style.transform = `translateX(${(1 - f) * panelW}px)`;
+        }
       }
     };
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
     update(); // park everything correctly (card 7 starts fully unfolded)
 
     // stepped cadence: glide one slot, then DWELL with the focal card fully
-    // unfolded and dead level, then glide again
-    let spin: gsap.core.Timeline | null = null;
-    if (!reduced) {
-      spin = gsap
-        // repeatRefresh recomputes the "-=" each cycle — without it every
-        // repeat replays the SAME slot and the wheel sticks
-        .timeline({ paused: true, repeat: -1, repeatRefresh: true, onUpdate: update })
-        .to(state, { off: `-=${SLOT}`, duration: 0.75, ease: "power2.inOut" })
-        .to({}, { duration: 0.65 }); // the pause at full extension
-    }
+    // unfolded and dead level, then glide again — a self-driven rAF phase
+    // machine looping forever. Each glide starts from wherever the last one
+    // ended (the decrement compounds every cycle — a fixed target would
+    // replay the SAME slot and the wheel would stick).
+    const GLIDE = 750; // ms per slot
+    const DWELL = 650; // ms paused at full extension
+    let spinning = false;
+    let started = false;
+    let raf = 0;
+    let phase: 0 | 1 = 0; // 0 = glide, 1 = dwell
+    let phaseStart = 0;
+    let glideFrom = 0; // state.off at the top of the current glide
+    let lastTick = 0;
+    let pausedAt = 0;
 
-    // spin only while the section is anywhere near the viewport
-    const st = ScrollTrigger.create({
-      trigger: root,
-      start: "top bottom",
-      end: "bottom top",
-      onEnter: () => spin?.play(),
-      onEnterBack: () => spin?.play(),
-      onLeave: () => spin?.pause(),
-      onLeaveBack: () => spin?.pause(),
+    const tick = (now: number) => {
+      // lag smoothing: a long stall (backgrounded tab) shifts the clock
+      // forward instead of fast-forwarding the wheel through missed slots
+      if (now - lastTick > 500) phaseStart += now - lastTick - 33;
+      lastTick = now;
+      if (phase === 1 && now - phaseStart >= DWELL) {
+        // dwell over — the next slot begins on this same frame
+        phase = 0;
+        phaseStart += DWELL;
+        glideFrom = state.off;
+      }
+      if (phase === 0) {
+        const t = Math.min(1, (now - phaseStart) / GLIDE);
+        state.off = glideFrom - SLOT * easeFn.inOut2(t);
+        if (t >= 1) {
+          phase = 1;
+          phaseStart += GLIDE;
+        }
+      }
+      // render every tick, dwell included (the old timeline's onUpdate
+      // fired through the empty dwell tween too) — so a mid-dwell resize
+      // re-renders on the next frame instead of waiting for the next glide
+      update();
+      raf = requestAnimationFrame(tick);
+    };
+
+    const play = () => {
+      if (reduced || spinning) return; // reduced: the loop never starts
+      spinning = true;
+      const now = performance.now();
+      if (started) {
+        phaseStart += now - pausedAt; // resume mid-phase, no jump
+      } else {
+        started = true;
+        phaseStart = now;
+        glideFrom = state.off;
+      }
+      lastTick = now;
+      raf = requestAnimationFrame(tick);
+    };
+    const pause = () => {
+      if (!spinning) return;
+      spinning = false;
+      pausedAt = performance.now();
+      cancelAnimationFrame(raf);
+    };
+
+    // spin only while the section is anywhere near the viewport (any
+    // intersection at all — the old top/bottom-to-bottom/top window)
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) play();
+        else pause();
+      }
     });
+    io.observe(root);
 
     return () => {
-      spin?.kill();
-      st.kill();
+      cancelAnimationFrame(raf);
+      io.disconnect();
       ro.disconnect();
     };
-  }, []);
-
-  // Scroll help, hero-style: one deliberate wheel tick inside this section
-  // commits the glide — down pulls the Risk curtain fully over, up pulls it
-  // back open. Input is held during the glide; the fling that carried the
-  // user here must die out before a tick can commit.
-  useLayoutEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const onWheel = (e: WheelEvent) => {
-      if (glideGate(e)) return; // glide in flight, or a landing's tail
-      const H = root.offsetHeight;
-      // this section is sticky, so its own offsetTop follows the viewport
-      // once stuck — anchor to the (non-sticky) neighbors instead
-      const next = root.nextElementSibling as HTMLElement | null;
-      const prev = root.previousElementSibling as HTMLElement | null;
-      if (!next) return;
-      const top = next.offsetTop - H;
-      const y = window.scrollY;
-      if (y < top - 2) return; // still above this section — not ours to steer
-      // in-region ticks are HELD and the glide commits on accumulated
-      // intent — tiny trackpad deltas add up instead of drifting natively
-      if (e.deltaY > 0 && y < top + H - 2) {
-        e.preventDefault();
-        if (intentTick(e)) glideTo(top + H, 1); // pull the curtain over
-      } else if (e.deltaY < 0 && y > top + 2 && y <= top + H + 2) {
-        e.preventDefault();
-        if (intentTick(e)) glideTo(top, -1); // pull it back open
-      } else if (e.deltaY < 0 && y >= top - 2 && y <= top + 2 && prev) {
-        // parked exactly at this section's stop — NOT anywhere below it
-        // (unbounded, this caught up-ticks all the way down in the FAQ and
-        // glided them straight to Evan)
-        e.preventDefault();
-        if (intentTick(e)) glideTo(prev.offsetTop, -1); // up to the section above
-      }
-    };
-
-    window.addEventListener("wheel", onWheel, { passive: false });
-    return () => window.removeEventListener("wheel", onWheel);
   }, []);
 
   return (
     <section ref={rootRef} className={styles.section} id="creators">
       <div className={styles.copy}>
-        <p className={styles.eyebrow}>You don&rsquo;t pay upfront for marketing</p>
+        <p className={styles.eyebrow}>
+          You don&rsquo;t pay upfront for marketing
+        </p>
         <h2 className={styles.heading}>
           Our creators pitch your idea to their followers and make commission
           when you earn
