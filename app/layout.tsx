@@ -155,11 +155,16 @@ export default function RootLayout({
             reading two buttons to buffer 1.6 MB. What that flip fills is the
             element's own buffer, which is what the readyState check before
             play() actually reads; a link preload would not. */}
+        {/* media-scoped: phones don't render the tile texture at all
+            (intro-gate.module.css strips .tile::before ≤700px), so they
+            must not spend 135 KB fetching it either. Change one, change
+            both. */}
         <link
           rel="preload"
           as="image"
           href="/assets/btn%20texture.png"
           fetchPriority="high"
+          media="(min-width: 701px)"
         />
         {/* Desktop deliberately preloads NOTHING for the hero backdrop: on
             the clip path it is the stinger's own last frame, snapshotted out

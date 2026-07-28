@@ -433,10 +433,18 @@
 }
 
 /* Phones anchor the clip the way hero.module.css anchors the phone hero, so
-   the hand-off is seamless in that posture too. */
+   the hand-off is seamless in that posture too. They also drop the tiles'
+   screen texture outright (owner: "remove the texture of the button on
+   phone") — the multiply blend is the most expensive part of the tile paint
+   as well. layout.tsx's preload for the texture PNG is media-scoped to
+   ≥701px for the same reason; change one, change both. */
 @media (max-width: 700px) {
   .video {
     object-position: center top;
+  }
+
+  .tile::before {
+    display: none;
   }
 }
 

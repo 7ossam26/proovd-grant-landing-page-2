@@ -385,27 +385,42 @@ export function RiskSection() {
       // effectively landed by the time they visibly open, and the dead beat
       // of blank white between trigger and landing is gone. The sweep
       // launches behind them on the same cue.
-      cancelInView = onceInView(root, 85, () => {
-        releaseHold = holdScroll(DOORS_MS + 350, root);
-        try {
-          for (const d of doors) {
-            anims.push(
-              playTo(
-                d,
-                {
-                  transform: `translateX(${
-                    d.dataset.door === "l" ? "-102%" : "102%"
-                  })`,
-                },
-                { duration: DOORS_MS / 1000, ease: EASE.inOut3 },
-              ),
-            );
+      //
+      // PHONE fires much LATER, at 45, because `gap` — and so the length of
+      // the auto-glide — IS the trigger line: at 85 the hold had ~0.85 of a
+      // viewport to travel, ~690px of a phone page moving with no finger on
+      // it ("the sections kind of scroll up alone"). At 45 the section
+      // already fills over half the screen and the carry is ~365px, which
+      // reads as the swipe being finished for you. It also keeps the trigger
+      // clear of the seam, where a URL-bar collapse/expand — which resizes
+      // the viewport and so MOVES the observer's line with no gesture behind
+      // it — could otherwise walk a resting section across it. Desktop wheel
+      // input has neither problem, so it keeps the early line.
+      cancelInView = onceInView(
+        root,
+        window.matchMedia("(max-width: 700px)").matches ? 45 : 85,
+        () => {
+          releaseHold = holdScroll(DOORS_MS + 350, root);
+          try {
+            for (const d of doors) {
+              anims.push(
+                playTo(
+                  d,
+                  {
+                    transform: `translateX(${
+                      d.dataset.door === "l" ? "-102%" : "102%"
+                    })`,
+                  },
+                  { duration: DOORS_MS / 1000, ease: EASE.inOut3 },
+                ),
+              );
+            }
+            startIntro();
+          } catch {
+            failOpen();
           }
-          startIntro();
-        } catch {
-          failOpen();
-        }
-      });
+        },
+      );
     } catch {
       failOpen();
     }
