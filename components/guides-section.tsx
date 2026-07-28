@@ -209,12 +209,7 @@ export function GuidesSection() {
       if (heading) park(heading, { opacity: 0, transform: "translateY(18px)" });
       if (sub) park(sub, { opacity: 0, transform: "translateY(16px)" });
       if (stack) park(stack, { opacity: 0, transform: "translateY(26px)" });
-      // PHONE fires later (45 vs 72) for the same reason as Risk and Days:
-      // `gap` — the length of the auto-glide — IS the trigger line, and
-      // 0.72 of a phone viewport is ~585px of the page moving with no finger
-      // on it ("the sections kind of scroll up alone").
-      const line = window.matchMedia("(max-width: 700px)").matches ? 45 : 72;
-      cancelInView = onceInView(root, line, () => {
+      cancelInView = onceInView(root, 72, () => {
         releaseHold = holdScroll(1000, root, () => {
           try {
             if (heading) {

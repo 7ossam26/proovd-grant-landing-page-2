@@ -1088,21 +1088,15 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
               ? Math.abs(offs[aheadIdx] - offs[backIdx])
               : Math.abs(offs[aheadIdx]);
           const travel = Math.abs(window.scrollY - segY);
-          // Lower bound: a deliberate gesture, not drift. PHONE is a true
-          // paginator (owner: "I want to scroll jack the evan section on
-          // swipe goes to the next") — 0.05·H ≈ 41px at 812, about the
-          // shortest thing a thumb can do on purpose, so every real swipe
-          // carries you to the next beat and centres it instead of tidying
-          // back to the one you just left. Desktop keeps the higher 0.12·H
-          // bar: a trackpad emits far more small, incidental deltas while
-          // reading, and page-turning on those read as heavy.
-          // Upper bound: a run that already covered more than a beat has
-          // chosen its own landing spot — carrying it further would be
-          // overriding, not assisting. It also keeps any bogus origin inert
-          // (the largest phantom this engine can produce, the intro's
-          // body-pin release, is several beats wide).
-          const commit = (isPhone ? 0.05 : 0.12) * H;
-          if (travel >= commit && travel <= 1.25 * Math.max(1, pitch)) {
+          // Lower bound: a deliberate flick, not thumb drift (~97px at 812) —
+          // a reading-adjustment scroll must NOT page-turn; that trigger-
+          // happiness is what read as heavy. Upper bound: a run that already
+          // covered more than a beat has chosen its own landing spot —
+          // carrying it further would be overriding, not assisting. The bound
+          // also keeps any bogus origin inert (the largest phantom this
+          // engine can produce, the intro's body-pin release, is several
+          // beats wide and so always falls outside it).
+          if (travel >= 0.12 * H && travel <= 1.25 * Math.max(1, pitch)) {
             best = offs[aheadIdx];
             bestIdx = aheadIdx;
             advance = true;

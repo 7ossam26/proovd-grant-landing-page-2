@@ -57,30 +57,28 @@ export function DaysSection() {
     const HOLE_FULL =
       "polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%," +
       " -10% -10%, -10% 110%, 110% 110%, 110% -10%, -10% -10%)";
-    // The trigger sits at 90 on desktop (owner: "the clip grow should be
-    // from the middle of the risk section not after scrolling down"): one
-    // wheel-notch past Risk's resting view fires it — the glide sweeps the
-    // last of Risk off across two identical dark surfaces (this cover IS the
-    // Risk panel's colour, so the seam never shows) and the hole opens the
-    // moment it lands, instead of waiting out a hand-scroll a third of the
-    // way into the section. PHONE fires much LATER, at 45, and the reason is
-    // the glide LENGTH: `gap` is the section's top at trigger time, so a
-    // trigger at 90 hands `holdScroll` ~0.9 of a viewport to travel — on a
-    // phone that is ~730px of the page moving with no finger on it, which is
-    // exactly "the sections kind of scroll up alone". At 45 the section
-    // already fills over half the screen when it fires and the carry is
-    // ~365px: it reads as the swipe being finished for you. It also puts the
-    // trigger far from the seam, so a URL-bar collapse/expand (which resizes
-    // the viewport and so MOVES the observer's line with no gesture behind
-    // it) can no longer walk a resting section across it.
+    // The trigger sits at 90 (owner: "the clip grow should be from the middle
+    // of the risk section not after scrolling down"): one wheel-notch past
+    // Risk's resting view fires it — the glide sweeps the last of Risk off
+    // across two identical dark surfaces (this cover IS the Risk panel's
+    // colour, so the seam never shows) and the hole opens the moment it
+    // lands, instead of waiting out a hand-scroll a third of the way into
+    // the section.
     if (cover) {
       root.classList.add(styles.isLive);
-      const line = window.matchMedia("(max-width: 700px)").matches ? 45 : 90;
-      cancelArrive = onceInView(root, line, () => {
+      cancelArrive = onceInView(root, 90, () => {
         // 650ms grow, released 350ms after it lands (was 900/1250 — owner:
         // "the calendar section transition make it faster").
         releaseHold = holdScroll(1000, root, () => {
           if (cancelled) return;
+          // The navbar re-evaluates only on `scroll`, and a pinned body
+          // emits none — so its clear-over-#days state used to wait for the
+          // hold's RELEASE, seconds after the section owned the screen ("the
+          // nav bar takes a bit to go away"). Poke its listener the moment
+          // the glide lands: rects under a pin reflect the virtual position,
+          // so it computes the right answer now, and the 0.3s background
+          // fade finishes well inside the grow.
+          window.dispatchEvent(new Event("scroll"));
           try {
             const grow = cover.animate(
               [{ clipPath: HOLE_SMALL }, { clipPath: HOLE_FULL }],
