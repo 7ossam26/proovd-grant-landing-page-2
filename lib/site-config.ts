@@ -10,10 +10,11 @@ export const siteConfig = {
   name: "Proovd",
 
   /**
-   * Homepage <title> (default). Primary keyword + brand, kept ≤60 chars.
+   * Homepage <title> (default) — the tab text, all-caps per the owner.
    * Sub-pages get "%s | Proovd" via the title template in layout.tsx.
+   * e2e/smoke.spec.ts asserts the tab title straight from this value.
    */
-  defaultTitle: "Proovd",
+  defaultTitle: "PROOVD",
 
   /**
    * Default meta description (≤155 chars) — intent-matching, grounded in the
@@ -37,8 +38,6 @@ export const siteConfig = {
    */
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://proovd.co",
 
-  /** The Proovd app. CTAs route founders and affiliates to their real entry points. */
-  appUrl: "https://app.proovd.co",
   /** Founder conversion CTA target (hero, nav "Jump in", "Start Campaign", pricing). */
   founderUrl: "https://app.proovd.co/login",
   /** Affiliate/creator entry (nav "Got an audience?"). */
@@ -50,5 +49,3 @@ export const siteConfig = {
    */
   ogImage: "/og.png",
 } as const;
-
-export type SiteConfig = typeof siteConfig;

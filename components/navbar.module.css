@@ -21,7 +21,9 @@
 }
 
 .logo {
-  height: clamp(1.5rem, 2.2vw, 2.5rem);
+  /* a bit bigger on laptop too (owner) — the hero FLIP measures this rect
+     live, so nothing else needs to move with it */
+  height: clamp(1.75rem, 2.6vw, 2.875rem);
   width: auto;
 }
 
@@ -120,5 +122,18 @@
 
   .panel {
     display: flex;
+  }
+
+  /* a touch more presence on phone — bigger wordmark, a slightly taller bar.
+     Everything that depends on the nav's real size measures it live (the Evan
+     layout reads offsetHeight, the hero FLIP reads the logo rect), so no
+     other numbers need to move with these. */
+  .nav {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .logo {
+    height: 2.125rem;
   }
 }

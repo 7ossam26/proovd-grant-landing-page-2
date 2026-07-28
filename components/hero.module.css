@@ -16,14 +16,51 @@
   overflow: hidden;
 }
 
+/* The backdrop box. On the intro's clip path it is filled by a <canvas>
+   carrying the stinger's own last frame; there is NO fallback still any more
+   (the owner deleted the hero art when the asset set went webp), so on every
+   other path — reduced motion, Save-Data, refused autoplay, no JS — .hero's
+   background-color IS the surface. The crop below MUST equal `.video`'s
+   object-position in intro-gate.module.css, on BOTH postures: intro-gate
+   hands the clip's last frame over on a single paint, so any disagreement
+   shows up as that frame jumping as the gate fades. */
 .bg {
   position: absolute;
   inset: 0;
-  background-image: url("/assets/Hero_desktop.webp");
   background-size: cover;
-  background-position: 35% center;
+  /* Anchored RIGHT, not centre. The subject sits in the right half of a 16:9
+     frame, so centre-anchoring cropped into his face the moment the viewport
+     got narrower than 16:9. Anchored right, `cover` can only ever eat the
+     empty room on the left, and he stays whole at every width.
+
+     TOP, not centre, for the same reason on the other axis: his hair starts
+     0.9% down the frame — flush with the top edge — while there is ~15% of
+     dead room below his beard. Centre-anchoring split the vertical crop
+     evenly and so shaved his hair on any viewport wider than 16:9. Anchored
+     top, the crop comes off the desk instead. (Both numbers were measured
+     off the frame; past ~2.09 aspect something must clip whatever we do, and
+     the bottom of a beard is the cheapest thing to lose.)
+
+     Phones override this below — do not "tidy" the two into one value. */
+  background-position: right top;
   z-index: 0;
 }
+
+/* The intro's snapshotted last frame — a <canvas> the gate drops in here
+   (intro-gate.tsx). It MUST crop exactly like the background above or the
+   hand-off from clip to still would jump. This is the single source of truth
+   for that crop; the gate deliberately sets no inline geometry. */
+.bg > [data-hero-frame] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right top;
+}
+
+/* JS off: no gate, no clip, no snapshot — and no still exists any more, so
+   the hero stands on its background-color surface. */
 
 .hero > :not(.bg) {
   position: relative;
@@ -68,7 +105,10 @@
   min-height: var(--touch);
   margin-top: clamp(2.25rem, 4.5vw, 4rem);
   margin-bottom: auto; /* pairs with the headline's margin-top:auto */
-  font-size: clamp(0.8125rem, 1.25vw, 1.875rem);
+  /* The floor used to be 0.8125rem (13px) against a 63px headline, which read
+     as an afterthought on every smaller laptop. Raised so it stays legible at
+     1024 without competing with the headline. Phones override this below. */
+  font-size: clamp(1rem, 1.5vw, 1.625rem);
   font-weight: 900;
   line-height: 1.1;
   text-decoration: none;
@@ -80,12 +120,100 @@
   }
 }
 
+/* ── Laptop posture (≥1024px; 701–1023px is blocked as tablet). Two hard
+   guarantees at EVERY laptop size, small to large:
+
+     1. his face is never cropped — the photo is anchored right (see .bg), so
+        `cover` only ever eats the empty room on the left;
+     2. the type never reaches him — the headline column is capped at the
+        x-position where his silhouette begins, and the type shrinks with
+        that column so a long word can never spill onto him.
+
+   Under `cover` the photo's displayed width is max(100vw, 16/9 × height) —
+   wider than the viewport exactly when the viewport is narrower than 16:9,
+   which is the case that used to break. Anchored right, his silhouette
+   begins --subject-x of the way across that width, measured back from the
+   right edge.
+
+   --subject-x was MEASURED off the frame, not guessed: the texture edge of
+   his hair sits at ~0.47 and his lit face at ~0.57, so 0.46 keeps a margin
+   on the hair. Re-cut the clip or swap the still and this is the one number
+   to re-check. */
+@media (min-width: 1024px) {
+  .hero {
+    --subject-x: 0.46;
+    --photo-w: max(100vw, 177.78svh);
+    --subject-left: calc(100vw - var(--photo-w) * var(--subject-x));
+    /* mirrors .hero's own inline padding */
+    --gutter: clamp(1.25rem, 3.5vw, 3.5rem);
+    --clear: clamp(1rem, 2.5vw, 3rem); /* type never TOUCHES him either */
+    --text-col: calc(var(--subject-left) - var(--gutter) - var(--clear));
+  }
+
+  .headline {
+    /* Tighter than the 1.28 the base rule gives phones — the laptop headline
+       is display-scale, where that much leading reads as loose. Kept at 1.18
+       rather than going tighter because splitWords() masks each word in an
+       overflow:hidden box with a 0.18em descender allowance, and DNA §6.4
+       puts the floor for a masked reveal at 1.14. Below that the rise clips. */
+    line-height: 1.18;
+    max-width: min(12ch, var(--text-col));
+    /* Three governors, smallest wins:
+       · 6.2vw — the design's own proportion, and what applies normally;
+       · --text-col / 4.6 — /4.6 ≈ the longest word ("building") in em, so the
+         clear column governs the type rather than the type overflowing it;
+       · 12.5vh — short viewports. Without it a display headline plus the CTA
+         simply doesn't fit the fold on a short laptop window. Inert at every
+         normal aspect (at 1440x780 it computes 97px against 6.2vw's 89px). */
+    font-size: clamp(
+      2rem,
+      min(5.6vw, calc(var(--text-col) / 4.6), 12.5vh),
+      8.5rem
+    );
+  }
+
+  /* The vertical rhythm is width-derived by default, which on a SHORT window
+     spends more on padding than there is room for and pushes the CTA under
+     the fold — the one thing DNA §9 says must never happen. Cap each against
+     the viewport height; all three are inert at normal aspects. */
+  .hero {
+    padding-top: min(clamp(1.5rem, 4vw, 3rem), 6vh);
+    padding-bottom: min(clamp(4.5rem, 11vw, 10rem), 14vh);
+  }
+
+  .start {
+    margin-top: min(clamp(2.25rem, 4.5vw, 4rem), 7vh);
+  }
+}
+
 /* ── Phone posture: taller hero image (face top, keyboard bottom), text
    block sits low over the keyboard. Sizes re-derived from phone width. */
 @media (max-width: 700px) {
+  /* Phones run the same sequence as desktop, on their own portrait clip
+     (CLIP.phone, 1080x1920): the intro snapshots ITS last frame into this
+     box, so the cut is pixel-exact here too and no still is fetched on the
+     happy path. Hero_mobile.webp is the fallback only — reduced motion,
+     Save-Data, refused autoplay, a dead file — which is why --hero-still
+     supplies it rather than a url() here.
+
+     new_hero_desktop.png is deliberately NOT used on phones: it is 16:9
+     landscape and 2.4 MB, so `cover` on a ~9:19.5 viewport would crop it to
+     a narrow strip of its own middle, at 25x the bytes, on the connection
+     least able to pay for them.
+
+     KEEP IN SYNC: HERO_ART and CLIP in components/intro-gate.tsx both mirror
+     this 700px breakpoint. */
+  /* No url() here either — --hero-still carries it, and intro-gate.tsx picks
+     the phone asset off this same 700px breakpoint. Phones always take the
+     still path (no snapshot: a 16:9 frame `cover`-cropped into a portrait
+     viewport is a narrow strip of its own middle), so the var is always set
+     by the time it matters. */
   .bg {
-    background-image: url("/assets/Hero_mobile.webp");
     background-position: center top;
+  }
+
+  .bg > [data-hero-frame] {
+    object-position: center top;
   }
 
   .hero {
@@ -99,7 +227,7 @@
   }
 
   .headline {
-    font-size: clamp(2.5rem, 13.25vw, 3.875rem);
+    font-size: clamp(2.125rem, 11.5vw, 3.375rem);
     margin-bottom: 0;
   }
 

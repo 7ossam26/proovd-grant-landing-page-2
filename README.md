@@ -1,7 +1,7 @@
 # Proovd — Landing Page
 
 Single-page marketing site (English only) built for **SEO** and **Core Web
-Vitals**. This repo is the configured shell; page UI is built in a later phase.
+Vitals**.
 
 ## Stack
 
@@ -9,7 +9,9 @@ Vitals**. This repo is the configured shell; page UI is built in a later phase.
 - **npm**
 - **Biome** — linting + formatting (no ESLint, no Prettier)
 - **Vitest** + React Testing Library (unit) · **Playwright** (E2E/smoke)
-- **GSAP** (installed; Flip / SplitText / ScrollTrigger available, unused so far)
+- **No animation library.** Motion runs on the Web Animations API + rAF via
+  `lib/motion.ts`. GSAP was removed; don't reintroduce it.
+- **three** — dynamically imported, only for the Evan section's corner-peel
 - **Satoshi**, self-hosted (variable woff2) via `@font-face` in `proovd.css`
 - **Docker** (`output: "standalone"`) → **Dokploy** on a VPS (auto-deploy on `main`)
 - **Analytics:** Microsoft Clarity + self-hosted Umami — env-gated, production-only
@@ -36,21 +38,20 @@ for future page-level styles. No Tailwind, no CSS-in-JS, no UI libraries.
   `docs/design-system/`.
 - `styles/fonts/Satoshi-Variable.woff2`, `styles/fonts/Satoshi-VariableItalic.woff2`
   — referenced by `proovd.css`'s `@font-face` (relative `fonts/…` URLs).
-- `lib/proovd-motion.js` — **stub**; the real font-verification + GSAP motion kit
-  is dropped in later.
-- `docs/vendor/` — reference GSAP builds; `docs/fonts-source/` — the static
-  Satoshi OTFs (not used by the app).
+- `docs/design-system/` — the DNA spec plus the master copy of `proovd.css`.
 
 ## Environment variables
 
-Copy `.env.example` → `.env.local`. All are `NEXT_PUBLIC_*` (browser-exposed).
+All optional, and all **inlined at build time** (see DEPLOY.md) — set them in
+`.env.local` for local runs. There is no `.env.example`.
 
 | Variable                         | Purpose                                                       |
 | -------------------------------- | ------------------------------------------------------------ |
-| `NEXT_PUBLIC_SITE_URL`           | Canonical origin (metadataBase, canonical, robots, sitemap). |
+| `NEXT_PUBLIC_SITE_URL`           | Canonical origin (metadataBase, canonical, robots, sitemap). Falls back to `https://proovd.co`. |
 | `NEXT_PUBLIC_CLARITY_PROJECT_ID` | Microsoft Clarity project id (prod-only, optional).          |
 | `NEXT_PUBLIC_UMAMI_SRC`          | Umami tracker script URL (prod-only, optional).              |
 | `NEXT_PUBLIC_UMAMI_WEBSITE_ID`   | Umami website id (UUID); required with `NEXT_PUBLIC_UMAMI_SRC`. |
+| `GOOGLE_SITE_VERIFICATION`       | Search Console token. The one non-`NEXT_PUBLIC_` var — read server-side in the metadata. |
 
 Analytics render **only** when `NODE_ENV=production` **and** the relevant vars
 are set — development stays free of third-party scripts.
@@ -59,7 +60,7 @@ are set — development stays free of third-party scripts.
 
 - `app/favicon.ico` (create-next-app default) and app icons.
 - `public/og.png` — default Open Graph / Twitter share image (1200×630).
-- `siteConfig.description` and `siteConfig.twitterHandle` in `lib/site-config.ts`.
+- `siteConfig.defaultTitle` in `lib/site-config.ts` is still just "Proovd".
 
 ## Deployment
 

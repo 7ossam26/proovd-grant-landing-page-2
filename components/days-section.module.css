@@ -31,6 +31,39 @@
   }
 }
 
+/* ── the pinhole cover ────────────────────────────────────────────────────
+   The arrival transition's mask (days-section.tsx): a panel of the section's
+   own surface — continuous with the Risk panel above — with a TINY square
+   hole already cut in its middle (evenodd polygon: outer ring = panel, inner
+   ring = hole). The arrival animates the hole past every edge, then hides
+   the panel. Resting clip matches the animation's first keyframe exactly, so
+   the covered state IS frame zero. Hidden until JS arms .isLive — no-JS and
+   reduced motion get the plain assembled section. */
+.cover {
+  position: absolute;
+  inset: 0;
+  z-index: 40; /* over the mask (auto) and the copy (2) */
+  background: #011e0b;
+  clip-path: polygon(
+    evenodd,
+    0% 0%,
+    100% 0%,
+    100% 100%,
+    0% 100%,
+    0% 0%,
+    49.25% 49%,
+    49.25% 51%,
+    50.75% 51%,
+    50.75% 49%,
+    49.25% 49%
+  );
+  visibility: hidden;
+}
+
+.section.isLive .cover {
+  visibility: visible;
+}
+
 /* ── copy ─────────────────────────────────────────────────────────────── */
 
 .copy {

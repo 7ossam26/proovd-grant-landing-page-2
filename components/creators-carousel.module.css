@@ -1,0 +1,501 @@
+/* Phone creators carousel — ported 1:1 from the owner's animation guide
+   ("proovd-section-carousel-mobile.html"): a 3D drum of creator cards spun
+   by drag/flick, whose focused card auto-opens its stat panel. The numbers
+   that shape the curve live in the engine (creators-section.tsx); this file
+   mirrors the guide's stylesheet. Deliberate deviations only: Satoshi
+   instead of the guide's Poppins (the site font is load-bearing), the
+   site's own per-card sheet colors through --tint/--ontint (the guide
+   cycled three tints — owner: don't change the cards' colors/text/logos),
+   site tokens for ink/surface/CTA, and the entrance cascade keys off
+   [data-in] (set on scroll-in, usually mid seam-jack) instead of page
+   load. Only mounted at ≤700px, so no media queries needed here. */
+
+.root {
+  --photow: clamp(103px, 31vw, 143px);
+  --panelw: clamp(130px, 39.4vw, 181px);
+  --cardh: calc(var(--photow) / 0.99);
+  --barh: 31px;
+  --boxw: calc(var(--photow) + var(--panelw));
+  /* facet width — the engine overwrites this with the measured pixel value;
+     the calc default keeps the no-JS flat card renderable */
+  --sw: calc(var(--photow) / 20);
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  overflow: hidden; /* the drum bleeds wide; it must never pan the page */
+  padding: clamp(5.5rem, 9vw, 8.5rem) 1.375rem 0;
+  color: var(--dark);
+}
+
+.heroTop {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.headline {
+  margin: 0;
+  font-weight: 700;
+  font-size: clamp(40px, 11.5vw, 54px);
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  color: var(--dark);
+  opacity: 0; /* rises on [data-in] */
+}
+
+/* ── stage ────────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  height: calc(var(--cardh) + 96px);
+  margin: 8px -1.375rem 0; /* bleed past the padding so the arc runs wide */
+  touch-action: pan-y; /* vertical page scroll stays native over the drum */
+  cursor: grab;
+  outline: none;
+  overflow: hidden;
+  opacity: 0; /* fades in on [data-in] */
+}
+
+.dragging {
+  cursor: grabbing;
+}
+
+/* the opening spin runs oversized and clipped by the section, not the
+   stage; the edge fades stand down while it plays */
+.root[data-intro="1"] .stage {
+  overflow: visible;
+  z-index: 45;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  perspective: var(--persp, 720px);
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+}
+
+.card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--boxw);
+  height: var(--cardh);
+  margin-left: calc(var(--boxw) / -2);
+  margin-top: calc(var(--cardh) / -2);
+  display: flex;
+  justify-content: center;
+  background: none;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  color: inherit;
+  cursor: inherit;
+  will-change: transform, opacity;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: calc(var(--photow) + var(--pw, 0px));
+  margin-left: calc((var(--photow) + var(--pw, 0px)) / -2);
+  outline: 3px solid var(--dark);
+  outline-offset: 4px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card:focus-visible::after {
+  opacity: 1;
+}
+
+/* ── the curved face: 20 facets, each a window onto the same picture ──── */
+
+.bend {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: translateX(calc(var(--pw, 0px) / -2)); /* keep box centred */
+}
+
+.flat {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: calc(var(--sw) * 20);
+  margin-left: calc(var(--sw) * -10);
+  transform: translateX(calc(var(--pw, 0px) / -2));
+  display: none;
+}
+
+/* the engine swaps the focused (perfectly flat) card onto the single-node
+   face so the browser composites 1 layer instead of 20 */
+.isFlat .bend {
+  display: none;
+}
+
+.isFlat .flat {
+  display: block;
+}
+
+.slice {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: calc(var(--sw) + 2.4px); /* facets overlap: no hairlines */
+  margin-left: calc((var(--sw) + 2.4px) / -2);
+  overflow: hidden;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.pic {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: calc(var(--sw) * 20 + 2px); /* bleeds under the panel edge */
+  transform: translateX(calc(var(--k) * var(--sw) * -1 + 1.2px));
+  display: flex;
+  flex-direction: column;
+  background: var(--tint);
+}
+
+.photo {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--dark) var(--img) 50% 38% / cover no-repeat;
+}
+
+.flat .pic {
+  transform: none;
+}
+
+/* ── the stat panel: opens rightward off the focused card ─────────────── */
+
+.panel {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  width: var(--pw, 0px);
+  margin-left: calc(var(--photow) / 2 - var(--pw, 0px) / 2);
+  overflow: hidden;
+  background: var(--tint);
+}
+
+.panelIn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--ontint, #fff);
+  width: var(--panelw);
+  height: 100%;
+  padding: clamp(9px, 2.5vw, 12px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  opacity: var(--po, 0);
+}
+
+.handle {
+  font-size: clamp(11px, 2.9vw, 13px);
+  font-weight: 600;
+  text-align: right;
+  letter-spacing: -0.01em;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+/* the site's platform marks ride in the guide's glyph slot, unboxed —
+   height-sized so YouTube's wide mark keeps its own aspect */
+.glyph {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.glyph svg {
+  height: clamp(23px, 6.2vw, 29px);
+  width: auto;
+}
+
+.count {
+  text-align: right;
+  line-height: 0.92;
+}
+
+.count b {
+  display: block;
+  font-size: clamp(21px, 6vw, 28px);
+  font-weight: 700;
+  letter-spacing: -0.045em;
+}
+
+.count span {
+  font-size: clamp(9px, 2.4vw, 11px);
+  font-weight: 500;
+}
+
+.rowniche {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.rowniche i {
+  font-style: normal;
+  font-size: clamp(9px, 2.4vw, 11px);
+  font-weight: 600;
+}
+
+.rowniche b {
+  font-size: clamp(14px, 4.1vw, 19px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+}
+
+/* resting state: the niche sits under the photo; the engine collapses it
+   (--fh → 0) as the panel opens */
+.foot {
+  height: var(--fh, var(--barh));
+  overflow: hidden;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 9px;
+  color: var(--ontint, #fff);
+}
+
+.foot i {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.foot b {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* ── the arc dissolves into the page at both ends ─────────────────────── */
+
+/* Layout probes. These exist so the engine never has to measure a CARD:
+   draw() culls cards with |offset| > VISIBLE via display:none, so any
+   measurement taken off one silently returns 0 the moment the drum has
+   spun (and every resize re-measures). visibility:hidden keeps a probe
+   laid out, so its width is always the real resolved clamp. */
+.probe,
+.probePanel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.probe {
+  width: var(--photow);
+}
+
+.probePanel {
+  width: var(--panelw);
+}
+
+.fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 7.5%;
+  pointer-events: none;
+  z-index: 60;
+  transition: opacity 0.45s ease;
+}
+
+.root[data-intro="1"] .fade {
+  opacity: 0;
+}
+
+/* --white is #FAFAFA — the rgba stops are that surface going transparent */
+.fadeL {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    var(--white) 0%,
+    rgba(250, 250, 250, 0.96) 26%,
+    rgba(250, 250, 250, 0.55) 62%,
+    rgba(250, 250, 250, 0) 100%
+  );
+}
+
+.fadeR {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    var(--white) 0%,
+    rgba(250, 250, 250, 0.96) 26%,
+    rgba(250, 250, 250, 0.55) 62%,
+    rgba(250, 250, 250, 0) 100%
+  );
+}
+
+.hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  z-index: 70;
+  margin: 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(1, 63, 23, 0.38);
+  pointer-events: none;
+  opacity: 0; /* fades in last on [data-in] */
+}
+
+.stage:focus-visible .hint {
+  color: var(--dark);
+}
+
+/* ── pitch + CTA ──────────────────────────────────────────────────────── */
+
+.pitch {
+  margin: 18px 0 0;
+  padding: 0;
+  font-size: clamp(19px, 5.3vw, 24px);
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.02em;
+  opacity: 0; /* rises on [data-in] */
+}
+
+.ctaWrap {
+  flex: 0 0 auto;
+  padding: 34px 0 calc(26px + env(safe-area-inset-bottom, 0px));
+  opacity: 0; /* rises on [data-in] */
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--touch);
+  background: var(--brand);
+  color: var(--white);
+  font-weight: 700;
+  font-size: clamp(18px, 5vw, 21px);
+  letter-spacing: -0.02em;
+  padding: 14px 20px;
+  border-radius: var(--radius);
+  text-decoration: none;
+}
+
+/* ── entrance cascade — the guide's load-time delays, keyed off arrival ── */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.root[data-in="1"] .headline {
+  animation: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.92s both;
+}
+
+.root[data-in="1"] .pitch {
+  animation: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) 1.12s both;
+}
+
+.root[data-in="1"] .ctaWrap {
+  animation: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) 1.26s both;
+}
+
+.root[data-in="1"] .hint {
+  animation: fadein 0.7s ease 1.85s both;
+}
+
+.root[data-in="1"] .stage {
+  animation: fadein 0.35s ease both;
+}
+
+/* ── pre-JS / no-JS: copy readable, one flat card standing in ─────────── */
+
+.root:not(.isLive) .headline,
+.root:not(.isLive) .pitch,
+.root:not(.isLive) .ctaWrap,
+.root:not(.isLive) .hint,
+.root:not(.isLive) .stage {
+  opacity: 1;
+}
+
+.root:not(.isLive) .card {
+  display: none; /* unpositioned cards would stack dead centre */
+}
+
+.root:not(.isLive) .card:first-child {
+  display: flex;
+}
+
+.root:not(.isLive) .card:first-child .bend {
+  display: none;
+}
+
+.root:not(.isLive) .card:first-child .flat {
+  display: block;
+}
+
+/* ── reduced motion: everything standing, no cascade, no spin ─────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .headline,
+  .pitch,
+  .ctaWrap,
+  .hint,
+  .stage {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat [data-in] */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat [data-in] */
+    opacity: 1 !important;
+  }
+
+  .fade,
+  .cta {
+    transition: none;
+  }
+}

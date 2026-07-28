@@ -120,6 +120,7 @@ export function FaqSection() {
               className={styles.question}
               aria-expanded={open === i}
               onClick={() => setOpen(open === i ? null : i)}
+              data-hover="underline"
             >
               <span>{f.q}</span>
               <span

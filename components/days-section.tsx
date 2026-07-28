@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import {
   EASE,
+  holdScroll,
   onceInView,
   park,
   playFrom,
@@ -25,6 +26,8 @@ export function DaysSection() {
 
     let cancelled = false;
     let cancelInView: (() => void) | undefined;
+    let cancelArrive: (() => void) | undefined;
+    let releaseHold: (() => void) | undefined;
     let split: WordSplit | undefined;
     const anims: Animation[] = [];
 
@@ -33,6 +36,67 @@ export function DaysSection() {
     const title = root.querySelector<HTMLElement>("[data-title]");
     const sub = root.querySelector<HTMLElement>("[data-sub]");
     const cta = root.querySelector<HTMLElement>("[data-cta]");
+    const cover = root.querySelector<HTMLElement>("[data-cover]");
+
+    // ── the arrival: the pinhole reveal (owner: "a very tiny clip mask
+    // square that grows until it shows the entire section underneath and
+    // goes off screen"). The cover is a panel of the section's own surface —
+    // continuous with the Risk panel above it, so scrolling toward this
+    // section reads as more of the same dark ground — with a tiny square
+    // hole cut in its middle (an evenodd polygon: outer ring = the panel,
+    // inner ring = the hole). The arrival glides the section onto the
+    // viewport top, then the hole grows past every edge and the cover is
+    // gone. .isLive arms it; no-JS and reduced motion never see a cover.
+    //
+    // The copy's own entrance keys off position (onceInView below) and the
+    // glide carries it across that line, so the words rip up through the
+    // growing window — "whatever animation it has starts".
+    const HOLE_SMALL =
+      "polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%," +
+      " 49.25% 49%, 49.25% 51%, 50.75% 51%, 50.75% 49%, 49.25% 49%)";
+    const HOLE_FULL =
+      "polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%," +
+      " -10% -10%, -10% 110%, 110% 110%, 110% -10%, -10% -10%)";
+    // The trigger sits at 90 (owner: "the clip grow should be from the middle
+    // of the risk section not after scrolling down"): one wheel-notch past
+    // Risk's resting view fires it — the glide sweeps the last of Risk off
+    // across two identical dark surfaces (this cover IS the Risk panel's
+    // colour, so the seam never shows) and the hole opens the moment it
+    // lands, instead of waiting out a hand-scroll a third of the way into
+    // the section.
+    if (cover) {
+      root.classList.add(styles.isLive);
+      cancelArrive = onceInView(root, 90, () => {
+        // 650ms grow, released 350ms after it lands (was 900/1250 — owner:
+        // "the calendar section transition make it faster").
+        releaseHold = holdScroll(1000, root, () => {
+          if (cancelled) return;
+          // The navbar re-evaluates only on `scroll`, and a pinned body
+          // emits none — so its clear-over-#days state used to wait for the
+          // hold's RELEASE, seconds after the section owned the screen ("the
+          // nav bar takes a bit to go away"). Poke its listener the moment
+          // the glide lands: rects under a pin reflect the virtual position,
+          // so it computes the right answer now, and the 0.3s background
+          // fade finishes well inside the grow.
+          window.dispatchEvent(new Event("scroll"));
+          try {
+            const grow = cover.animate(
+              [{ clipPath: HOLE_SMALL }, { clipPath: HOLE_FULL }],
+              { duration: 650, easing: EASE.inOut3, fill: "forwards" },
+            );
+            anims.push(grow);
+            grow.finished
+              .then(() => {
+                cover.style.display = "none";
+              })
+              .catch(() => {});
+          } catch {
+            // §6.6 — a cover that cannot animate must not stay covering
+            cover.style.display = "none";
+          }
+        });
+      });
+    }
 
     const reveal = () => {
       if (cancelled || !mask || !bg || !title) return;
@@ -98,6 +162,10 @@ export function DaysSection() {
     return () => {
       cancelled = true;
       cancelInView?.();
+      cancelArrive?.();
+      releaseHold?.(); // a body left position:fixed freezes the whole site
+      root.classList.remove(styles.isLive);
+      cover?.style.removeProperty("display");
       for (const a of anims) a.cancel();
       try {
         split?.revert();
@@ -116,6 +184,10 @@ export function DaysSection() {
       <div className={styles.mask} data-mask aria-hidden="true">
         <div className={styles.bg} data-bg />
       </div>
+      {/* the pinhole cover — the section's own surface with a tiny square
+          hole; the arrival grows the hole past every edge (see the effect).
+          Armed by .isLive; no-JS and reduced motion never see it. */}
+      <div className={styles.cover} data-cover aria-hidden="true" />
       <div className={styles.copy}>
         <h2 className={styles.title} data-title>
           14 days

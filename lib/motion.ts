@@ -28,7 +28,7 @@ export const easeFn = {
   inOut2: (t: number) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2),
 } as const;
 
-export type TweenVars = {
+type TweenVars = {
   /** seconds, like the GSAP call it replaces */
   duration: number;
   /** seconds */
@@ -163,6 +163,116 @@ export function splitWords(el: HTMLElement): WordSplit {
       else el.setAttribute("aria-label", prevLabel);
     },
   };
+}
+
+/* ── the arrival hold ──────────────────────────────────────────────────────
+   One section-entrance scroll lock, shared by every section that owns a
+   transition (creators' spin, risk's doors, days' clip reveal, the guides
+   jack). Born in creators-section.tsx; the full history lives in CLAUDE.md.
+
+   **The lock is a PINNED BODY, not preventDefault** — nothing lighter stops
+   an iOS momentum fling. Same finding the Evan story's holdInput() rests on:
+   once a finger lifts no touchmove fires, so there is nothing left to
+   prevent, while a pinned body has no scroll range for the momentum to move.
+
+   **And it pins IMMEDIATELY, then glides the page onto the section itself.**
+   An earlier version waited for the scroll to go still before pinning so it
+   could not freeze the Evan seam jack half-way — but that wait IS a
+   slide-through: a trackpad flick covers most of a viewport inside it. So it
+   takes the in-flight scroll over instead: pin on the spot, then animate
+   `body.style.top` from wherever the page was to the section's own top
+   (settleToTop()'s technique — while the body is pinned `scrollTo` does
+   nothing, so the glide has to move the pin). A jack's remaining frames
+   become no-ops and its SLIP check aborts it cleanly.
+
+   `onSettled` fires when the page is not just held but LANDED — time the
+   section's entrance from it. `ms` (the release backstop) runs from that
+   same moment, not from the call.
+
+   Returns a release fn. Callers MUST call it on unmount: a body left
+   position:fixed freezes the whole site. */
+
+// Distance-aware, on the Evan magnet's own advance ramp — triggers sit at
+// different depths per section and posture, so a flat duration would be a
+// gentle nudge on one and a snatch on another.
+const holdGlideMs = (gap: number, h: number) =>
+  200 + 260 * Math.min(1, gap / (0.62 * h));
+
+export function holdScroll(
+  ms: number,
+  target: HTMLElement,
+  onSettled?: () => void,
+): () => void {
+  let held = false;
+  let lockedY = 0; // the virtual scroll while pinned; body.top === -lockedY
+  let raf = 0;
+  let timer = 0;
+
+  const release = () => {
+    if (raf) cancelAnimationFrame(raf);
+    if (timer) clearTimeout(timer);
+    raf = 0;
+    timer = 0;
+    if (!held) return;
+    held = false;
+    const b = document.body.style;
+    b.position = "";
+    b.top = "";
+    b.left = "";
+    b.width = "";
+    document.documentElement.style.overscrollBehavior = "";
+    // unpin and restore in the SAME synchronous tick — coalesced into one
+    // paint, so the scrollY-0 intermediate never shows (the Evan lesson)
+    window.scrollTo(0, lockedY);
+  };
+
+  const settled = () => {
+    timer = window.setTimeout(release, ms);
+    onSettled?.();
+  };
+
+  // someone else already owns the page (the Evan statement's own hold, or a
+  // neighbouring section's): stacking a second pin would read scrollY as 0
+  // and restore the document top on release. Stand down — but the entrance
+  // still gets its cue, or a one-off collision would cost it its opening.
+  if (document.body.style.position !== "fixed") {
+    held = true;
+    lockedY = window.scrollY;
+    // measured BEFORE the pin, though pinning moves nothing: body.top exactly
+    // compensates the scroll it replaces
+    const gap = target.getBoundingClientRect().top;
+    const b = document.body.style;
+    b.position = "fixed";
+    b.top = `${-lockedY}px`;
+    b.left = "0";
+    b.width = "100%";
+    document.documentElement.style.overscrollBehavior = "none";
+    // Only ever glide FORWARD onto the section. Arriving from below (scrolling
+    // up out of the next section) puts its top above the viewport — gap < 0 —
+    // and gliding then would drag the reader backwards through a section they
+    // just left. Hold where they are instead.
+    if (gap > 1) {
+      const y0 = lockedY;
+      const t0 = performance.now();
+      const dur = holdGlideMs(gap, window.innerHeight);
+      const step = (now: number) => {
+        if (!held) return; // released mid-glide (unmount): stop writing
+        const t = Math.min(1, (now - t0) / dur);
+        lockedY = y0 + gap * easeFn.out2(t);
+        document.body.style.top = `${-lockedY}px`;
+        if (t < 1) {
+          raf = requestAnimationFrame(step);
+          return;
+        }
+        raf = 0;
+        settled();
+      };
+      raf = requestAnimationFrame(step);
+      return release;
+    }
+  }
+  settled();
+  return release;
 }
 
 /** ScrollTrigger { start: "top N%", once: true } parity: fire `cb` once when

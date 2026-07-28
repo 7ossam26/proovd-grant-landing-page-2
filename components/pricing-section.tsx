@@ -273,7 +273,12 @@ export function PricingSection() {
               </li>
             ))}
           </ul>
-          <a className={styles.cta} href={siteConfig.founderUrl} data-cta>
+          <a
+            className={styles.cta}
+            href={siteConfig.founderUrl}
+            data-cta
+            data-hover="primary"
+          >
             Start my campaign now
           </a>
           <p className={styles.fine} data-fine>

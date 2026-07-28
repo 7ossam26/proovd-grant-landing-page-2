@@ -1,0 +1,480 @@
+/* Full-screen entry gate — first screen on load. Covers the whole page,
+   above the navbar (z-index 900). The navy field is the one section-local
+   literal (per spec); the tiles reuse brand tokens so the palette stays in
+   sync with the rest of the site.
+
+   The whole intro on one clock. React flips two attributes and a phase.
+   Before any of it, phase "loading" holds a 0→100% count (~1.8s + a 0.25s
+   beat, timed in intro-gate.tsx) with the crank clip looping above it —
+   the tiles wait underneath at visibility: hidden. Then, from the pick:
+
+     0.00s  BLINK  the picked tile blinks 3x, 0.12s a blink
+                                                   .tile[data-flashing]
+     0.24s  SHUT   the OTHER tile closes along its width: max-width
+                   100% -> 0% from both edges, its padding and its 6px
+                   border collapsing on the same clock so the border box
+                   really reaches zero              .tile[data-closing]
+     0.24s  SPACE  its grid row runs 1fr -> 0fr and the row gap runs to 0,
+                   so it stops holding layout space and the survivor GLIDES
+                   to the middle of the screen      .choices[data-picked]
+     0.76s  SEAL   phase "sealing": the WINNER now takes the same exit —
+                   the identical .tile[data-closing] rule, with the flash
+                   delay taken out of --shut-delay so it starts on the beat
+     1.28s  PLAY   phase "playing": the stinger fades up over the navy over
+                   --fade and runs its ~0.97s                     .video
+     ~2.4s  CUT    phase "done": the gate leaves over --exit — 0s on
+                   desktop, because the clip's last frame and the hero's
+                   background are the same 1920x1080 picture cropped the
+                   same way, so a dissolve would only double-expose it
+    +0.34s  GONE   phase "gone": display: none.
+
+   KEEP IN SYNC: components/intro-gate.tsx mirrors this clock in `T`
+   (seal 760 = --shut-delay + --shut; cut 520 = --shut; exit 340 >= --exit).
+   Retiming --shut-delay or --shut here means retiming those.
+
+   The row collapse is the same flexible-track trick faq-section.module.css
+   uses to open an answer (0fr -> 1fr), run in reverse. The shut and the
+   space-reclaim run on one shared clock, so the box and the layout can
+   never desync and it reads as a single gesture.
+
+   Every transition in this file is declared on the element itself
+   (.gate / .choices / .tile / .tile::before / .video), never inside a state
+   selector. That is not a style preference: it is what lets the
+   reduced-motion `transition: none` block at the bottom win on source order
+   at EQUAL specificity. A transition declared inside .tile[data-closing]
+   (0,2,0) would silently defeat that override — which is exactly what it
+   used to do for the texture layer.
+
+   Every phase after "picked" is also reachable straight from a failure (no
+   video, refused autoplay, Escape, the module's deadline) — the gate has
+   exactly one exit and it is the promise in lib/intro.ts. See
+   intro-gate.tsx. */
+
+.gate {
+  /* Named so the tile width can be derived from it. A raw `90vw` cap
+     overflows this padding below ~480px: the padding only tracks 5vw
+     between 600px and 1200px, and floors at a fixed 1.5rem under 600px,
+     so the content box is 100vw - 48px — narrower than 90vw. */
+  --gate-pad: clamp(1.5rem, 5vw, 3rem);
+  /* One source of truth for the tile width: the column reads it, and so
+     does the texture layer, which has to stay put while a tile closes over
+     it. Never wider than the gate's own content box. Page scrollbars are
+     hidden (styles/globals.css), so 100vw is the fixed gate's real width. */
+  --tile-w: min(100vw - var(--gate-pad) * 2, 24rem);
+
+  /* The shut. Starts on the picked tile's third blink (0.24s), runs 0.52s,
+     lands at 0.76s. The curve is EASE.out4 from lib/motion.ts (power4.out)
+     — the kit's exit curve: leaves immediately, settles softly. */
+  --shut-delay: 0.24s;
+  --shut: 0.52s;
+  --shut-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  /* The last sliver's fade. Expressed off the vars above so it always
+     co-terminates with the shut, however the timing is retuned later — and
+     so that zeroing --shut-delay for the winner (below) carries it along
+     for free: var() inside a custom property resolves against whatever
+     --shut-delay won the cascade ON THIS ELEMENT. */
+  --seal: 0.14s;
+  --seal-delay: calc(var(--shut-delay) + var(--shut) - var(--seal));
+  /* The texture layer retires early — see .tile::before. Same trick: it
+     rides --shut-delay, so the winner's texture leaves on its own beat. */
+  --texture-out: 0.18s;
+  /* The stinger's fade-up over the navy. */
+  --fade: 0.16s;
+  /* The gate's own exit. 0s = hard cut, which is what the desktop wants:
+     the clip ends on the very frame .bg paints, at the same crop. */
+  --exit: 0s;
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000; /* over the navbar (900) — covers the whole page */
+  display: grid;
+  place-items: center;
+  /* .video is sized to the HERO's box, which can be taller than the
+     viewport; the gate stays exactly the viewport and clips the surplus. */
+  overflow: hidden;
+  padding: var(--gate-pad);
+  /* HSL 231 100% 3% — the spec's near-black navy (≈ #00020f) */
+  background: hsl(231 100% 3%);
+  opacity: 1;
+  transition: opacity var(--exit) linear;
+}
+
+/* The winner leaves the same way its sibling did — the very same
+   .tile[data-closing] rule — one beat later. The only difference is that
+   the flash already happened, so the delay that was waiting for it goes.
+   The loser is already sitting on its end values, so re-resolving its
+   delay starts nothing: a transition only runs on a VALUE change. */
+.gate[data-phase="sealing"],
+.gate[data-phase="playing"],
+.gate[data-phase="done"],
+.gate[data-phase="gone"] {
+  --shut-delay: 0s;
+}
+
+/* No frame ever painted (autoplay refused, the file never buffered, a
+   decode error, Escape) — there is nothing to cut against, so dissolve the
+   navy instead of hard-cutting it. */
+.gate[data-cut="soft"] {
+  --exit: 0.28s;
+}
+
+.gate[data-phase="done"],
+.gate[data-phase="gone"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gate[data-phase="gone"] {
+  display: none;
+}
+
+/* JS off: this gate is a modal with no way out, so it must not exist —
+   otherwise it would trap the entire page, not just the hero. `scripting`
+   is the CSS-native check; intro-gate.tsx carries a <noscript> belt for
+   engines that predate it (Chrome <120, Firefox <113, Safari <17). */
+@media (scripting: none) {
+  .gate {
+    display: none;
+  }
+}
+
+/* The stinger. `inset: 0` really is full bleed: the containing block for an
+   absolutely positioned child is the ancestor's PADDING box, and .gate is
+   `position: fixed; inset: 0` with no border, so its padding box is exactly
+   the viewport — the --gate-pad only insets .gate's CONTENT box, which an
+   out-of-flow child does not resolve against. (Do not "correct" this to a
+   negative inset: that oversizes the video by 2 x --gate-pad in each
+   dimension and crops the clip harder than `cover` crops the hero image,
+   which turns the match cut into a jump cut.)
+
+   …but full-bleed to the VIEWPORT is still not the same box as .bg, which
+   paints into .hero — `min-height: 100svh`, i.e. TALLER than the viewport
+   whenever the hero's content overflows one screen, and measured in svh,
+   which is not the fixed containing block on any UA with a dynamic toolbar.
+   `cover` resolves against whatever box it is painted into, so two different
+   boxes = two different crop scales, and the "match cut" would visibly zoom
+   and shift. intro-gate.tsx publishes the hero's live rect as --crop-*, which
+   makes the two `cover` computations identical by construction; .gate clips
+   the overflow. The fallbacks are the old viewport behaviour, for when no
+   hero is on the page.
+
+   object-position MUST match .bg's background-position in hero.module.css
+   for the same reason: same 16:9 source, same `cover`, same anchor. */
+.video {
+  position: absolute;
+  top: var(--crop-y, 0px);
+  left: 0;
+  z-index: 1; /* over the tiles, which are gone by the time it shows */
+  width: var(--crop-w, 100%);
+  height: var(--crop-h, 100%);
+  object-fit: cover;
+  /* MUST equal .bg's background-position AND the snapshot canvas's
+     object-position in hero.module.css. When these drifted apart — the clip
+     centre-anchored while the hero was right/top-anchored — the crop shifted
+     the instant the gate handed over, which read as the last frame jumping
+     as it faded. Phones override below, exactly as hero.module.css does. */
+  object-position: right top;
+  background-color: hsl(231 100% 3%); /* no white box before frame one */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--fade) linear;
+}
+
+.gate[data-phase="playing"] .video,
+.gate[data-phase="done"] .video,
+.gate[data-phase="gone"] .video {
+  opacity: 1;
+}
+
+/* ── the pre-choice loader (phase "loading") ──────────────────────────────
+   A 0→100% count — written by rAF in intro-gate.tsx, nothing here animates —
+   with the crank clip looping above it. It shares .choices' grid cell: the
+   tiles hold their layout underneath at visibility: hidden, so the implicit
+   track (stretched to the viewport by the default align-content) centres
+   both on the same spot and the swap is a clean in-place reveal. display,
+   not visibility, because the loader must not hold layout once the tiles
+   are up. Reduced motion never enters "loading" (intro-gate.tsx goes
+   straight to "choosing"), so no motion override is needed here. */
+.loader {
+  grid-area: 1 / 1;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.25rem, 3.5vh, 2.25rem);
+}
+
+.gate[data-phase="loading"] .loader {
+  display: flex;
+}
+
+.crank {
+  /* a bit bigger on laptop (owner) — the vw term and ceiling only bite at
+     ≥1024px widths, so the phone floor stays where it was */
+  width: clamp(10rem, 30vw, 21rem);
+  /* the clip is 960×960; declaring it stops the column jumping when the
+     metadata lands (a video's placeholder intrinsic size is 300×150) */
+  aspect-ratio: 1;
+  background-color: hsl(231 100% 3%); /* no black box before frame one */
+}
+
+.count {
+  color: var(--white); /* white on the navy (owner — was brand mint) */
+  font-weight: 800;
+  font-size: clamp(1.5rem, 1rem + 2vw, 2.25rem);
+  font-variant-numeric: tabular-nums; /* the digits count without jiggling */
+  letter-spacing: 0.04em;
+}
+
+.choices {
+  grid-area: 1 / 1; /* the loader's cell — see .loader */
+  display: grid;
+  /* One column, pinned to the container width. An implicit `auto` column
+     would size to the label's max-content width and — now that the label
+     is bigger and can't wrap — could push past the gate. A flexible track
+     resolves against the definite width instead, so it never overflows. */
+  grid-template-columns: 1fr;
+  /* Exactly two rows, one per CHOICES entry, in source order. Both 1fr, so
+     the tiles match height (what align-items: stretch used to do) and the
+     losing row is already a flexible track that can interpolate to 0fr. */
+  grid-template-rows: 1fr 1fr;
+  row-gap: clamp(3rem, 9vh, 6.5rem);
+  width: var(--tile-w);
+  transition:
+    grid-template-rows var(--shut) var(--shut-ease) var(--shut-delay),
+    row-gap var(--shut) var(--shut-ease) var(--shut-delay);
+}
+
+/* The tiles hold layout under the loader (visibility keeps the track sized
+   and the buttons out of the tab order and the a11y tree) until the count
+   lands. */
+.gate[data-phase="loading"] .choices {
+  visibility: hidden;
+}
+
+/* Both tiles are shut by the time the clip shows — drop the group so
+   nothing can be focused or hit-tested underneath it, and so no sub-pixel
+   mint hairline can survive into the video. */
+.gate[data-phase="playing"] .choices,
+.gate[data-phase="done"] .choices,
+.gate[data-phase="gone"] .choices {
+  visibility: hidden;
+}
+
+/* The gap must close with the row: a dead 0fr row still leaves its gap
+   behind, which would park the survivor half a gap off-centre. Only with
+   this does .gate's place-items: center land it mid-screen. */
+.choices[data-picked] {
+  row-gap: 0;
+}
+
+/* Which row shuts. data-picked carries the PICKED key and the rows follow
+   CHOICES source order, so "idea" (row 1) collapses row 2, and vice versa.
+   The picked row keeps its 1fr through the seal, so the winning tile closes
+   horizontally — like an aperture, exactly as its sibling did. */
+.choices[data-picked="idea"] {
+  grid-template-rows: 1fr 0fr;
+}
+
+.choices[data-picked="product"] {
+  grid-template-rows: 0fr 1fr;
+}
+
+.tile {
+  position: relative;
+  isolation: isolate; /* contain the multiply blend to the tile's own fill */
+  overflow: hidden; /* clips label + texture while the tile shuts */
+  width: 100%; /* fills the column… */
+  /* …and THIS is what animates to 0. The resting value has to be spelled
+     out: the initial `max-width: none` is a keyword and can't interpolate.
+     Percentage -> percentage keeps it a single interpolation type. */
+  max-width: 100%;
+  justify-self: center; /* shut toward its own centre, not its left edge */
+  min-width: 0; /* the nowrap label must never floor the tile's width */
+  /* Nothing may floor the height either, or the 0fr row keeps the tile's
+     min-content height and leaks a stripe of text. Same reason there is no
+     min-height: var(--touch) here — 44px would become a hard floor on the
+     collapsing row, and the tile clears the touch minimum unaided. */
+  min-height: 0;
+  font-family: inherit;
+  font-weight: 700;
+  /* bigger, per request (was clamp(1.25rem, 0.9rem + 1vw, 1.75rem)) */
+  font-size: clamp(1.5rem, 1.1rem + 1.5vw, 2rem);
+  line-height: 1.1;
+  /* Horizontal padding tightened with the type bump: the label is nowrap
+     now, so it needs the headroom most at the narrow end. */
+  padding: clamp(1.125rem, 0.7rem + 1.35vw, 1.75rem)
+    clamp(0.875rem, 3vw, 1.25rem);
+  text-align: center;
+  color: var(--darker); /* #012D10 — dark-green ink */
+  background-color: var(--white); /* #FAFAFA — light fill */
+  border: 6px solid var(--brand); /* #41ED98 — mint */
+  border-radius: var(--radius); /* 1px — sharp */
+  cursor: pointer;
+  transition:
+    max-width var(--shut) var(--shut-ease) var(--shut-delay),
+    padding var(--shut) var(--shut-ease) var(--shut-delay),
+    border-width var(--shut) var(--shut-ease) var(--shut-delay),
+    opacity var(--seal) linear var(--seal-delay);
+}
+
+/* A tile on its way out — the loser from the pick, the winner from the
+   sealing beat. Everything holding inline space goes to zero on the same
+   schedule: max-width closes the box from both edges, and the padding and
+   border must travel with it — under box-sizing: border-box a 0-width box
+   still paints its padding and border, so leaving them behind would strand
+   a ~60px mint-bordered stub on screen for good. They can't clamp the width
+   either: at progress f the box is 384f wide against 60f of padding +
+   border, so the width is never the smaller of the two. The opacity dip is
+   the last 0.14s only, so a sub-pixel mint hairline can't pop off at the
+   end. END VALUES ONLY — the transition lives on .tile. */
+.tile[data-closing] {
+  max-width: 0%;
+  padding: 0;
+  border-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Screen texture, multiplied over the light fill. Pinned to the tile's
+   RESTING width and centred on it, so a closing tile clips the pattern like
+   a shutter instead of squeezing it (background-size is a % of this box). */
+.tile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: var(--tile-w);
+  margin-left: calc(var(--tile-w) * -0.5);
+  z-index: 0; /* over the fill, under the label */
+  background: url("/assets/btn texture.png") center / 180% 180% no-repeat;
+  mix-blend-mode: multiply;
+  /* multiply reveals a near-white texture only by DARKENING it — the earlier
+     contrast() pushed those pixels to pure white and erased the pattern.
+     Two dials keep the pattern readable without dimming the tile: brightness
+     lifts the texture's own mid-tones (anything >= 1 clips to white, where
+     multiply is a no-op), opacity caps how far the multiply can pull the
+     fill down. Was saturate(1.7) brightness(0.85) at full opacity, which
+     read grey; this is the same texture, a stop brighter.
+     Two independent knobs if it needs retuning: opacity = how much the
+     multiply darkens at all, brightness = how much texture survives. */
+  filter: saturate(1.45) brightness(1.06);
+  opacity: 0.72;
+  pointer-events: none;
+  /* The retire-early fade is declared HERE, not on the [data-closing] state
+     rule, for the same reason .tile owns its shorthand: only at THIS
+     specificity can the reduced-motion `transition: none` below win the
+     source-order tie. Only the delay varies, and it rides --shut-delay, so
+     the winner's texture leaves the instant its own shutter starts. */
+  transition: opacity var(--texture-out) linear var(--shut-delay);
+}
+
+/* The layer is pinned horizontally, but top/bottom keep it tied to the
+   padding box — so it would still squash VERTICALLY as the row collapses.
+   Retire it early instead: the pattern is gone before the squash is
+   legible, and it drops the mix-blend-mode group (the most expensive part
+   of the sequence on a weak GPU) for most of the close. */
+.tile[data-closing]::before {
+  opacity: 0;
+}
+
+.label {
+  position: relative;
+  z-index: 1; /* paints above the texture layer */
+  /* One line, always. A re-wrap mid-shut would jump the row height and
+     reflow the text while it is being clipped. With text-align: center on
+     the tile the overflow spills both ways, so the words stay dead centre
+     and the shutter closes over them. Vertically the same happens for
+     free: a <button> centres its content, so once the row height drops
+     below the label the line is clipped symmetrically top and bottom —
+     the tile closes like an aperture, never a guillotine.
+     Note this makes the label copy a layout constraint: anything longer
+     than "I have a product" needs the 24rem cap or the type clamp revisited. */
+  white-space: nowrap;
+}
+
+/* Press feedback — the tile squishes in, blinks fully out and back, three
+   times, then rests. 0.12s a blink now (was 0.28s): 0.36s all in, 57%
+   shorter, with the keyframes byte-identical so it keeps its character.
+   The other tile starts shutting at 0.24s, i.e. during the third blink, so
+   the two share a 120ms window and read as one event.
+   Three blinks and no more: at this speed that is ~8Hz locally and it
+   stays inside WCAG 2.3.1 only because it stops at three — do not raise
+   the iteration count without slowing the beat back down.
+   State is cleared in JS on animationend so the next press re-flashes. */
+.tile[data-flashing] {
+  animation: flash 0.12s ease-in-out 3;
+}
+
+/* The opacity: 0 at 50% is now a ~30ms blackout — about two frames at
+   60Hz. If it reads glitchy rather than snappy, raise the beat toward
+   0.14s before reshaping these keyframes. */
+@keyframes flash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(0.93);
+  }
+  50% {
+    opacity: 0;
+    transform: scale(0.93);
+  }
+  75% {
+    opacity: 1;
+    transform: scale(0.93);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Phones anchor the clip the way hero.module.css anchors the phone hero, so
+   the hand-off is seamless in that posture too. */
+@media (max-width: 700px) {
+  .video {
+    object-position: center top;
+  }
+}
+
+/* Phones used to force a dissolve here, because the only clip was 16:9 and
+   the phone hero was a different photograph — a hard cut would have been a
+   jump cut. mobile-video.mp4 (1080x1920, portrait) removed that: phones now
+   play their own clip and cut to ITS last frame, so they take the same
+   hard-cut path as desktop and need no override. */
+
+/* Last in the file so its `transition: none` wins the equal-specificity
+   tie — which is only possible because every transition above is declared
+   on .gate / .video / .choices / .tile / .tile::before themselves, never
+   inside a state selector.
+
+   No strobe, no glide, no fade — and above all no full-screen autoplaying
+   video (intro-gate.tsx never arms the clip here and never flips its
+   preload off "none", so the 1.6 MB is not even fetched). The pick simply
+   lands: the end state is the same one the transitions were heading for,
+   so the other tile is already shut, the survivor already centred, and the
+   gate already gone on the very next paint. The [data-cut] selector is
+   repeated so this beats the 0.28s dissolve above, which carries an
+   attribute's worth of specificity. */
+@media (prefers-reduced-motion: reduce) {
+  .gate,
+  .gate[data-cut="soft"] {
+    --exit: 0s;
+    --fade: 0s;
+  }
+
+  .tile[data-flashing] {
+    animation: none;
+  }
+
+  .gate,
+  .video,
+  .choices,
+  .tile,
+  .tile::before {
+    transition: none;
+  }
+}

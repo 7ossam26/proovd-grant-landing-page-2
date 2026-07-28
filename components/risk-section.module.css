@@ -18,31 +18,106 @@
   overflow: hidden;
 }
 
+/* Sized for the three-word headline it carries now: the intro contracts the
+   title onto this from 1.25× (1.6× under 900px), and at the old display size
+   that overshoot ran past both edges of a laptop viewport. */
 .title {
   color: var(--mint);
   font-weight: 500; /* deliberately light — calm, matter-of-fact */
-  font-size: clamp(3.25rem, 9.5vw, 11rem);
+  font-size: clamp(2.75rem, 7.6vw, 7.25rem);
   line-height: 1.05;
   letter-spacing: -0.01em;
   margin: 0;
+  transform-origin: center top; /* the settle must not drift sideways */
 }
 
-.sub {
-  color: var(--mint);
-  font-weight: 400;
-  font-size: clamp(1.125rem, 2vw, 2.375rem);
-  line-height: 1.4;
-  max-width: 44ch;
-  margin: 0;
+/* each word is one flying unit — it rides the wave in on its own */
+.word {
+  display: inline-block;
+  will-change: transform;
 }
 
 /* type sits above the corner stickers wherever they meet */
 .title,
-.sub,
 .stack,
 .kicker {
   position: relative;
   z-index: 1;
+}
+
+/* ── the intro sweep ──────────────────────────────────────────────────────
+   One run of the whole sticker set, riding a sine wave across the section
+   and out the left. It exists only for the intro: hidden by default, so no
+   JS and reduced motion never see a row of stickers parked on the panel. */
+
+.strip {
+  position: absolute;
+  /* the band's centre is top + height/2 = 57vh — a little under the page's
+     middle on EVERY posture (owner), so the run sweeps behind the copy
+     rather than across the empty top of the panel */
+  top: 34vh;
+  left: 0;
+  height: 46vh;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  z-index: 0; /* under the type, which carries z-index 1 */
+  pointer-events: none;
+  visibility: hidden;
+  will-change: transform;
+}
+
+/* Phone size, walked up over three owner passes: 20vh read "a bit too big"
+   (tallest sticker 211px on a 390-wide screen), 15vh too small, 18vh still
+   small — 21vh lands the tallest at 222px. */
+.sweep {
+  --h: 1;
+  --gap: 6vw;
+  flex: none;
+  height: calc(clamp(96px, 21vh, 280px) * var(--h));
+  width: auto;
+  margin-right: var(--gap);
+  will-change: transform;
+}
+
+.sweep:last-child {
+  margin-right: 0;
+}
+
+/* Laptop: the same band, bigger artwork. The strip is placed by `top` +
+   `height`, never by a transform — the engine owns the transform outright,
+   so any centring written there is overwritten on the first sampled frame. */
+@media (min-width: 900px) {
+  .sweep {
+    height: calc(clamp(140px, 32vh, 480px) * var(--h));
+  }
+}
+
+/* ── Curtains: Doors ──────────────────────────────────────────────────────
+   Two panels of the CREATORS surface (page white) covering this section, so
+   scrolling toward it reads as closed doors continuing the white section
+   above; the arrival glides the section to the viewport top and parts them
+   (risk-section.tsx). Hidden until JS arms .isLive — no-JS and reduced
+   motion land on the plain assembled section, never behind doors. Width
+   overlaps the centre by half a percent so no seam line can show. */
+.door {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 50.5%;
+  background: var(--white);
+  z-index: 10; /* over everything in the section — type tops out at 1 */
+  visibility: hidden;
+}
+
+.doorRight {
+  left: auto;
+  right: 0;
+}
+
+.section.isLive .door {
+  visibility: visible;
 }
 
 /* ── the guarantee stack ──────────────────────────────────────────────── */
@@ -127,10 +202,34 @@
 /* phone: the stickers pin to the extreme corners and the section pads
    PAST them — the text column and the stickers can never overlap */
 @media (max-width: 700px) {
+  /* the block padding is SYMMETRIC: `justify-content: center` centres inside
+     the content box, so unequal padding puts the copy off-centre (measured
+     226 above / 218 below at 390×844 before this) */
   .section {
     padding-top: clamp(7.5rem, 31vw, 10rem);
-    padding-bottom: clamp(7rem, 29vw, 9.5rem);
+    padding-bottom: clamp(7.5rem, 31vw, 10rem);
     gap: clamp(1.25rem, 5vw, 1.75rem);
+  }
+
+  /* the copy runs smaller on phone than the fluid desktop scale gives it —
+     the headline's own clamp floor (44px at 390) was set for a laptop, and
+     the owner has since taken it down twice more */
+  .title {
+    font-size: clamp(1.6875rem, 8.2vw, 2.125rem);
+  }
+
+  .stackLine {
+    font-size: clamp(0.875rem, 3.7vw, 1rem);
+  }
+
+  .kicker {
+    font-size: clamp(0.9375rem, 3.9vw, 1.0625rem);
+  }
+
+  /* the band drops further under the middle on phone than on laptop
+     (owner: "below a bit") — centre 63vh against the laptop's 57vh */
+  .strip {
+    top: 40vh;
   }
 
   /* hugging the text block — still inside the padding zone, never on it */

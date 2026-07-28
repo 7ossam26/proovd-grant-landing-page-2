@@ -208,6 +208,18 @@ export function Navbar() {
       showNav();
     };
 
+    // Where the page ACTUALLY is. While anything holds the page — the Evan
+    // opening statement, the creators entrance — <body> is position:fixed and
+    // `window.scrollY` reads 0, so the bar would retract for the whole hold
+    // and pop back on release ("make the navbar still be there when the
+    // creators section intro animation is playing"). The virtual scroll under
+    // a pin is -body.top, the convention every hold in this repo writes.
+    const scrollNow = () => {
+      const b = document.body.style;
+      if (b.position !== "fixed") return window.scrollY;
+      return -Number.parseFloat(b.top || "0") || 0;
+    };
+
     // One rAF-throttled scroll listener replaces both scroll triggers: the
     // show/hide line 10px down (the guards make it fire only on crossings),
     // and the stretch where the bar goes transparent over the 14-days
@@ -216,7 +228,7 @@ export function Navbar() {
     let raf = 0;
     const onScrollFrame = () => {
       raf = 0;
-      if (window.scrollY > 10) show();
+      if (scrollNow() > 10) show();
       else hideNav();
       if (days) {
         const r = days.getBoundingClientRect();

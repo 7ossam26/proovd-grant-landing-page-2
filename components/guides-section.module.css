@@ -1,0 +1,196 @@
+/* Guides — the bottom-hinge deck (owner's reference 074), running on its own
+   clock rather than on scroll: each card falls forward over its bottom edge
+   and the deck recycles for ever. One viewport tall. Copy left, stack right,
+   on the mint surface. */
+
+.section {
+  position: relative;
+  z-index: 30; /* rides the curtain with days/pricing/faq */
+  background: var(--mint);
+  /* The tail is space BEYOND the viewport, not carved out of it: box-sizing
+     is border-box, so `min-height: 100svh` with bottom padding would have
+     shortened the stage and lifted the deck off centre — the exact thing the
+     owner flagged. Adding the tail to the height instead leaves the stage a
+     full 100svh to centre inside, and the extra mint sits under it. */
+  --tail: clamp(3rem, 5vw, 5rem);
+
+  min-height: calc(100svh + var(--tail));
+  display: flex;
+  padding-bottom: var(--tail);
+}
+
+/* The block padding is near-symmetric, with only a slight bottom bias for
+   breathing room. The first pass hung 12rem under the content to make that
+   room, which simply pushed everything up the viewport — the owner read that
+   as "there is currently this white space and its not centered". Space below
+   has to come from the section being taller, never from the padding that the
+   centring resolves against. */
+.stage {
+  /* The navbar is FIXED and covers the top of this section, so centring in
+     the stage is not centring on SCREEN — measured at 1440×900, the content
+     sat dead centre of the stage (450) while the visible middle was 492, and
+     the owner read the 42px as "this isn't vertically centered". Carrying the
+     bar's height in the top padding moves the content down by half of it,
+     which lands it in the middle of what you can actually see. Tracks the
+     navbar's own sizing (measured 83px at 1440, 66 at 390). */
+  --nav: clamp(4.25rem, 5.8vw, 6.5rem);
+
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  align-items: center;
+  padding: calc(clamp(4rem, 7vw, 6rem) + var(--nav)) clamp(1.25rem, 5vw, 7rem)
+    clamp(4rem, 7vw, 6rem);
+  overflow: hidden;
+}
+
+/* ── copy ─────────────────────────────────────────────────────────────── */
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* The mock's two greens — section-local, like the creator card sheets. Both
+   were a step too pale on the first pass (owner): the headline now carries
+   the system's dark green and the sub takes the sage the headline had. */
+.heading {
+  color: var(--darker);
+  font-weight: 800;
+  font-size: clamp(2.25rem, 4.6vw, 4.75rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  max-width: 13ch;
+  margin: 0;
+}
+
+.sub {
+  color: #6b9e7b;
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2.2vw, 2.375rem);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  max-width: 22ch;
+  margin: clamp(1.5rem, 3.2vw, 3.5rem) 0 0;
+}
+
+/* ── the deck ─────────────────────────────────────────────────────────── */
+
+/* The deck sits on a black panel (owner), the way the reference frames its
+   artwork. The frame is an explicit INSET on the cards, not padding here: an
+   absolutely positioned child's containing block is this element's padding
+   BOX, which includes the padding area — so `inset: 0` covered the padding
+   and the frame measured 0px wide. */
+.stack {
+  --frame: clamp(1.5rem, 3.2vw, 3.25rem);
+  position: relative;
+  justify-self: center;
+  /* 30vw read too small against the reference's frame — this is ~41vw, and
+     the panel is landscape (1.28) like the mock rather than square */
+  width: clamp(20rem, 41vw, 42rem);
+  aspect-ratio: 1.1; /* taller than the 1.28 first pass (owner) */
+  background: #000;
+  /* The hinge's depth lives HERE, as a property — never as a per-card
+     perspective() inside the transform. transform-origin applies to the
+     whole transform chain, so a perspective() written on the card put the
+     vanishing point AT the bottom hinge and the fall read as the card
+     ballooning forward ("goes in front and disappears"). As a property the
+     origin is this panel's centre, and the card visibly swings. The panel
+     still clips the projected result (the mask), depth untouched. */
+  perspective: 1300px;
+  /* The fall is MASKED to the panel (owner: "currently the documents move to
+     the outside i want them masked inside this black square"). A card tipping
+     forward grows toward the viewer and used to swing clear of the frame; the
+     clip cuts it at the panel edge instead, so the whole hand-off happens
+     inside the black square. Each card carries its own `perspective()` inside
+     its transform, so the 3D is resolved on the card itself and this only
+     ever clips the flat result — the depth is untouched. */
+  overflow: hidden;
+}
+
+.card {
+  position: absolute;
+  inset: var(--frame);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: clamp(1.25rem, 2.2vw, 2.25rem);
+  border-radius: var(--radius);
+  text-align: left;
+  /* the hinge: every fall pivots on the bottom edge, forward and down */
+  transform-origin: 50% 100%;
+  /* the face is faded out before it is edge-on; this is the backstop, so a
+     mirrored back can never flash */
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* the sheen (owner) — one diagonal band of light across the sheet, the way a
+   laminated page catches a window. Deliberately overrides the DNA's no-
+   gradients rule, like the GSAP call before it. Softened on the owner's
+   second pass: 0.5 peak read as a glare stripe. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0) 28%,
+    rgba(255, 255, 255, 0.16) 44%,
+    rgba(255, 255, 255, 0.05) 54%,
+    rgba(255, 255, 255, 0) 68%
+  );
+  pointer-events: none;
+}
+
+.cardTitle {
+  position: relative;
+  z-index: 1; /* the sheen is decoration — it never sits over the words */
+  font-weight: 900; /* extra bold, per the owner */
+  /* ~1.5× the first pass (owner: "make the text bigger in the guides cards
+     like a lot bigger"). Checked against the longest deal ("60-Second
+     Opportunity Brief"): three lines at 1440, still clear of the blurb. */
+  font-size: clamp(2.375rem, 4vw, 4.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.cardBlurb {
+  position: relative;
+  z-index: 1;
+  font-weight: 600;
+  font-size: clamp(1.25rem, 2vw, 2.125rem); /* up with the title (owner) */
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ── phone ────────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .stage {
+    grid-template-columns: 1fr;
+    align-content: center;
+    justify-items: center;
+    row-gap: clamp(2rem, 8vw, 3rem);
+    text-align: center;
+  }
+
+  .copy {
+    align-items: center;
+  }
+
+  .heading,
+  .sub {
+    text-align: center;
+  }
+
+  .stack {
+    --frame: clamp(0.875rem, 4vw, 1.5rem);
+
+    width: min(88vw, 26rem);
+  }
+}

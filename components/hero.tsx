@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
+import { whenIntroDone } from "@/lib/intro";
 import { EASE, park, playFrom, splitWords, type WordSplit } from "@/lib/motion";
 import { siteConfig } from "@/lib/site-config";
 import styles from "./hero.module.css";
@@ -24,6 +25,7 @@ export function Hero() {
     if (!headline) return;
 
     let cancelled = false;
+    let fontTimer = 0;
     const anims: Animation[] = [];
     let split: WordSplit | null = null;
 
@@ -114,14 +116,31 @@ export function Hero() {
 
     // Split only after Satoshi is ready — short backstop so the page never
     // sits idle waiting on the font (word-grain masks don't need line
-    // measurement, so a late swap is harmless).
-    Promise.race([
+    // measurement, so a late swap is harmless). The .catch matters and was a
+    // latent hole before this change: a REJECTED FontFaceSet would skip
+    // .then(reveal) and leave the headline parked at opacity 0 /
+    // visibility hidden forever (§6.6).
+    const fontsReady = Promise.race([
       document.fonts.ready,
-      new Promise((resolve) => setTimeout(resolve, 600)),
-    ]).then(reveal);
+      new Promise((resolve) => {
+        fontTimer = window.setTimeout(resolve, 600);
+      }),
+    ]).catch(() => {});
+
+    // …and only once the intro gate has finished covering the screen. Until
+    // this landed the hero animated behind the opaque gate and was already
+    // over by the time anyone could see it. whenIntroDone() resolves on the
+    // stinger's last frame, on every one of the intro's failure paths, on
+    // Escape, and on a hard deadline inside lib/intro.ts — it cannot reject
+    // and it cannot hang, and if no <IntroGate /> is rendered at all it
+    // resolves on the spot rather than making the hero wait out a timer.
+    // Under reduced motion we never reach here: the effect returned above
+    // and the headline is plain, visible CSS.
+    Promise.all([fontsReady, whenIntroDone()]).then(reveal, reveal);
 
     return () => {
       cancelled = true;
+      if (fontTimer) clearTimeout(fontTimer);
       for (const a of anims) a.cancel();
       split?.revert();
       split = null;
@@ -133,7 +152,11 @@ export function Hero() {
 
   return (
     <section ref={rootRef} className={styles.hero} aria-label="Proovd">
-      <div className={styles.bg} aria-hidden="true" />
+      {/* The hero backdrop. On the intro's clip path this receives a <canvas>
+          holding the stinger's own last frame (intro-gate.tsx), so the cut is
+          pixel-exact and no separate still is fetched at all. Otherwise
+          --hero-still supplies the image. See hero.module.css. */}
+      <div className={styles.bg} data-hero-bg aria-hidden="true" />
       <img
         className={styles.logo}
         src="/assets/Proovd Logo.webp"
@@ -145,7 +168,7 @@ export function Hero() {
         data-hero-logo
       />
       <h1 className={styles.headline} data-headline>
-        Don’t go grey building the wrong thing.
+        Don’t grow old building the wrong startup
       </h1>
       <a
         href={siteConfig.founderUrl}

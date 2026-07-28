@@ -12,7 +12,9 @@ describe("landing page smoke test", () => {
 
     const h1s = container.querySelectorAll("h1");
     expect(h1s).toHaveLength(1);
-    expect(h1s[0]).toHaveTextContent("Don’t go grey building the wrong thing.");
+    expect(h1s[0]).toHaveTextContent(
+      "Don’t grow old building the wrong startup",
+    );
   });
 
   it("renders the key section anchors", () => {
