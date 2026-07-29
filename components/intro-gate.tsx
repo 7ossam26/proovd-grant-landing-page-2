@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { beacon } from "@/lib/beacon";
 import {
   armIntroDeadline,
   claimIntro,
@@ -88,11 +89,27 @@ const PHONE_QUERY = "(max-width: 700px)";
 const CRANK_SRC = "/assets/crank-load.mp4";
 const LOAD_MS = 1800; // the count itself
 const LOAD_TAIL = 250; // beat of rest at 100% before the tiles come up
+/** How long past the count the tiles may wait for the crank's FIRST FRAME.
+ *  The count is still decorative, but the reveal no longer outruns the crank
+ *  on a slow link — the fixed 1.8s count reached 100% with the 768 KB clip
+ *  still headerless on every throttled probe against the live site ("the
+ *  loading crank video doesn't show up"). The count parks at 99% for at most
+ *  this long; a dead or slow clip costs this cap, never the gate. Unlike the
+ *  reverted c7fdd4d loader this keys on `loadeddata` (first frame), which
+ *  every probed engine fires — NOT `canplaythrough` (WebKit never fires it,
+ *  which is what pinned that loader at 90% for its full 8s cap on iPhones) —
+ *  and it never waits on window `load`. */
+const LOAD_CRANK_WAIT = 2500;
 
-/** HTMLMediaElement.HAVE_ENOUGH_DATA, spelled out so no environment has to
- *  supply the constant. Anything less and a half-megabyte file would be
- *  playing half-downloaded through its own 0.97s runtime. */
-const BUFFERED = 4;
+/** HTMLMediaElement.HAVE_FUTURE_DATA, spelled out so no environment has to
+ *  supply the constant. The gate used to demand HAVE_ENOUGH_DATA (4), and
+ *  that bar proved engine-hostile on this site's own stinger: WebKit never
+ *  reported it at all (canplaythrough never fired even with the file fully
+ *  downloaded — 8/8 probed loads dropped a playable clip) and Firefox
+ *  reached it late. HAVE_FUTURE_DATA + the faststart mp4 + T.video's
+ *  mid-play ceiling keeps "drop rather than stutter" as the backstop without
+ *  dropping clips that would have played cleanly. */
+const PLAYABLE = 3;
 
 /** Milliseconds, mirroring the CSS clock in intro-gate.module.css. */
 const T = {
@@ -374,7 +391,7 @@ export function IntroGate() {
       if (!video) return;
       video.removeEventListener("ended", onEnded);
       video.removeEventListener("error", onMediaError);
-      video.removeEventListener("canplaythrough", onReady);
+      video.removeEventListener("canplay", onReady);
       video.removeEventListener("timeupdate", onTime);
     };
 
@@ -390,14 +407,23 @@ export function IntroGate() {
       video.muted = true;
       video.addEventListener("error", onMediaError);
       try {
-        // Posture decides the clip. Set here rather than as a JSX attribute
-        // so only ONE file is ever fetched — the element ships with no src at
-        // preload="none", so nothing is in flight until this line runs.
-        video.src = window.matchMedia(PHONE_QUERY).matches
+        // Posture decides the clip. Set on the ELEMENT rather than as a JSX
+        // attribute so only ONE file is ever fetched. Usually the parse-time
+        // kick in app/page.tsx has ALREADY armed this — seconds before
+        // hydration on a slow link, which is the whole point (probed on the
+        // live site: hydration landed at ~5.5s under Fast 3G, and a fetch
+        // that starts only then loses the intro's own races) — and
+        // re-assigning the same src would RESTART the download. Only (re)arm
+        // when the kick didn't run (it mirrors these same gates) or armed
+        // the other posture's clip (a rotation since parse).
+        const want = window.matchMedia(PHONE_QUERY).matches
           ? CLIP.phone
           : CLIP.desktop;
-        video.preload = "auto";
-        video.load();
+        if (!video.currentSrc?.endsWith(want)) {
+          video.src = want;
+          video.preload = "auto";
+          video.load();
+        }
       } catch {
         /* no media support at all — playClip() will skip the clip */
       }
@@ -414,11 +440,28 @@ export function IntroGate() {
     const count = countRef.current;
     let loadRaf = 0;
     let crankOn = false;
+    // The tiles' reveal may briefly wait for the crank's first frame (see
+    // LOAD_CRANK_WAIT). `crankReady` flips on `loadeddata` OR on any failure
+    // path, so this wait can only ever DELAY the tiles, never hold them.
+    let crankReady = false;
+    let crankWaited: (() => void) | undefined;
+    const crankIsReady = () => {
+      if (crankReady) return;
+      crankReady = true;
+      const fn = crankWaited;
+      crankWaited = undefined;
+      fn?.();
+    };
     const hideCrank = () => {
       if (crank) crank.style.display = "none";
+      crankIsReady(); // a hidden clip must not keep the tiles waiting
     };
     const beginChoosing = () => {
       if (count) count.textContent = "100%";
+      if (phaseRef.current === "loading") {
+        // one terminal datapoint per load: did the clip make the reveal?
+        beacon("intro-loader", { crankReady });
+      }
       go("choosing");
       if (crankOn && crank) {
         try {
@@ -441,13 +484,18 @@ export function IntroGate() {
         crank.defaultMuted = true;
         crank.muted = true;
         crank.addEventListener("error", hideCrank);
+        crank.addEventListener("loadeddata", crankIsReady, { once: true });
         try {
-          // Same no-src/preload="none" discipline as the stinger: nothing is
-          // fetched until this client has decided to play it.
-          crank.src = CRANK_SRC;
-          crank.preload = "auto";
-          crank.load();
+          // Same one-file discipline as the stinger — and the same head-start
+          // guard: the parse-time kick in app/page.tsx usually armed this
+          // already, and re-assigning the src would restart that fetch.
+          if (!crank.currentSrc) {
+            crank.src = CRANK_SRC;
+            crank.preload = "auto";
+            crank.load();
+          }
           crankOn = true;
+          if (crank.readyState >= 2) crankIsReady(); // first frame already in
           Promise.resolve(crank.play()).catch(hideCrank);
         } catch {
           hideCrank();
@@ -459,16 +507,34 @@ export function IntroGate() {
       const step = (now: number) => {
         if (!alive || phaseRef.current !== "loading") return;
         const p = Math.min(1, (now - t0) / LOAD_MS);
-        if (count) count.textContent = `${Math.round(p * 100)}%`;
-        if (p < 1) loadRaf = requestAnimationFrame(step);
-        else after(LOAD_TAIL, beginChoosing);
+        // The count no longer claims 100% while the crank has yet to paint a
+        // first frame: it parks at 99 and completes the moment the frame is
+        // in (or LOAD_CRANK_WAIT gives up on it). On a warm cache crankReady
+        // is already true here and nothing visibly changes.
+        const pct = Math.round(p * 100);
+        if (count) {
+          count.textContent = `${crankReady ? pct : Math.min(99, pct)}%`;
+        }
+        if (p < 1) {
+          loadRaf = requestAnimationFrame(step);
+          return;
+        }
+        if (crankReady) {
+          after(LOAD_TAIL, beginChoosing);
+        } else {
+          crankWaited = () => {
+            if (count) count.textContent = "100%";
+            after(LOAD_TAIL, beginChoosing);
+          };
+        }
       };
       loadRaf = requestAnimationFrame(step);
       // rAF is suspended in a hidden tab; this timer backstop still fires, so
-      // the gate can never sit at "loading" forever. after() timers are
-      // cleared by the dismissal teardown, and go() only moves forward, so
-      // neither path can drag a dismissed gate back.
-      after(LOAD_MS + LOAD_TAIL + 800, beginChoosing);
+      // the gate can never sit at "loading" forever — and it is also the cap
+      // on the crank wait above. after() timers are cleared by the dismissal
+      // teardown, and go() only moves forward, so neither path can drag a
+      // dismissed gate back.
+      after(LOAD_MS + LOAD_TAIL + LOAD_CRANK_WAIT, beginChoosing);
     }
 
     // ── THE one exit. Every success and every failure funnels through here.
@@ -508,7 +574,7 @@ export function IntroGate() {
     function startClip() {
       if (started || !alive || ended || !video) return;
       started = true;
-      video.removeEventListener("canplaythrough", onReady);
+      video.removeEventListener("canplay", onReady);
       video.addEventListener("ended", onEnded, { once: true });
       video.addEventListener("timeupdate", onTime);
       // 'ended' can go missing: a stall, a backgrounded tab, a truncated
@@ -549,18 +615,20 @@ export function IntroGate() {
         finish();
         return;
       }
-      if (video.readyState >= BUFFERED) {
+      if (video.readyState >= PLAYABLE) {
         startClip();
         return;
       }
-      // Not buffered yet — wait, briefly. `started` makes the two paths
+      // Not playable yet — wait, briefly. `started` makes the two paths
       // mutually exclusive, so the timeout can neither double-start the clip
       // nor cut off one that is already playing through a re-buffer.
-      video.addEventListener("canplaythrough", onReady, { once: true });
+      // 'canplay' fires at HAVE_FUTURE_DATA on every probed engine; the old
+      // 'canplaythrough' wait never fired at all on WebKit (see PLAYABLE).
+      video.addEventListener("canplay", onReady, { once: true });
       after(T.buffer, () => {
         if (started || ended) return;
-        video.removeEventListener("canplaythrough", onReady);
-        if (video.readyState >= BUFFERED && !clipFailed) startClip();
+        video.removeEventListener("canplay", onReady);
+        if (video.readyState >= PLAYABLE && !clipFailed) startClip();
         else finish(); // drop it rather than stutter a one-second stinger
       });
     };
@@ -608,6 +676,29 @@ export function IntroGate() {
       ended = true; // every remaining finish() is now a no-op
       clearTimers(); // cancel the whole pick chain
       detachVideo();
+      // An EXTERNAL finish (Escape, lib/intro's 7s deadline) bypasses
+      // finish() and used to discard a perfectly good frame — a clip that
+      // had painted still landed the hero on the bare background-color. If a
+      // frame is sitting in the element, keep it: snapshot now and dissolve
+      // onto it (cutOnEndedRef stays false, so this can never hard-cut).
+      if (
+        !heroDecodedRef.current &&
+        painted &&
+        video &&
+        video.readyState >= 2 &&
+        snapshotFrame()
+      ) {
+        heroDecodedRef.current = true;
+      }
+      // One terminal datapoint per page-view. Silent degradation is the
+      // design here, which is exactly why production failures were invisible
+      // — this is the counterweight (a no-op wherever analytics are absent).
+      beacon("intro-end", {
+        started,
+        painted,
+        snapshot: heroDecodedRef.current,
+        hardCut: cutOnEndedRef.current,
+      });
       // Stop decoding behind an invisible overlay during the 0.34s between
       // `done` and `gone`. Guarded on `started` so jsdom's unimplemented
       // pause() is never reached.
@@ -678,6 +769,7 @@ export function IntroGate() {
       cropRO?.disconnect();
       detachVideo();
       crank?.removeEventListener("error", hideCrank);
+      crank?.removeEventListener("loadeddata", crankIsReady);
       if (started && video) {
         try {
           video.pause();
@@ -793,18 +885,26 @@ export function IntroGate() {
 
       {/* The stinger, rendered from first paint and never conditionally, so
           the element exists in the server HTML — but with NO src and at
-          preload="none", so NOT ONE BYTE is fetched until the effect above
-          decides this client will play it AND which posture's clip it needs
-          (CLIP.desktop vs CLIP.phone). Shipping a src here would have the
-          preload scanner fetch the desktop clip on phones too. muted +
-          playsInline is the only combination browsers will autoplay; we still
-          handle a refusal. The effect sets `src` on the ELEMENT rather than
-          adding a child <source> on purpose: a failing <source> does not fire
-          a bubbling error on the media element (you get NETWORK_NO_SOURCE and
+          preload="none", so nothing is fetched until a script that has
+          CHECKED this client's gates decides it will play, and which
+          posture's clip it needs (CLIP.desktop vs CLIP.phone). Normally that
+          script is the parse-time MEDIA_KICK in app/page.tsx (seconds before
+          hydration on slow links); the effect above is the belt, re-arming
+          only when the kick didn't run. Shipping a src here instead would
+          have the preload scanner fetch the desktop clip on phones too.
+          muted + playsInline is the only combination browsers will autoplay;
+          we still handle a refusal. src goes on the ELEMENT rather than a
+          child <source> on purpose: a failing <source> does not fire a
+          bubbling error on the media element (you get NETWORK_NO_SOURCE and
           silence), and this sequence needs that error event. */}
       <video
         ref={videoRef}
         className={styles.video}
+        // Targeted by the parse-time media kick in app/page.tsx, which may
+        // set src/preload SECONDS before hydration on a slow link. The effect
+        // above checks currentSrc before (re)arming so the head start is
+        // never thrown away.
+        data-gate-clip=""
         preload="none"
         muted
         playsInline
@@ -823,6 +923,7 @@ export function IntroGate() {
         <video
           ref={crankRef}
           className={styles.crank}
+          data-gate-crank=""
           preload="none"
           muted
           playsInline
