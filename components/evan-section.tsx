@@ -2,11 +2,13 @@
 
 import type { ReactNode } from "react";
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { getIntroChoice, whenIntroDone } from "@/lib/intro";
+import { beacon } from "@/lib/beacon";
+import { getIntroChoice, whenIntroDismissed, whenIntroDone } from "@/lib/intro";
 import type { WordSplit } from "@/lib/motion";
 import {
   EASE,
   easeFn,
+  hasLiveHold,
   onceInView,
   park,
   playFrom,
@@ -1589,11 +1591,12 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
     let renderer: import("three").WebGLRenderer | null = null;
     let disposeFns: Array<() => void> = [];
 
-    (async () => {
+    const boot = async () => {
       let THREE: typeof import("three");
       try {
         THREE = await import("three");
       } catch {
+        beacon("peel-fallback", { stage: "import" });
         return;
       }
       const loadImg = (src: string) =>
@@ -1616,6 +1619,7 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
           imgs[src] = all[i];
         });
       } catch {
+        beacon("peel-fallback", { stage: "images" });
         return;
       }
       if (!alive) return;
@@ -1805,6 +1809,20 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
         needsRender = true;
       };
       mount.appendChild(renderer.domElement);
+      // A lost WebGL context (mobile memory pressure) used to leave a BLANK
+      // media panel for the rest of the session: the peel stayed `active`,
+      // so the CSS scenes were hidden behind a canvas that would never draw
+      // again, and the crossfade branch was permanently skipped. Give the
+      // peel up instead and fall back to the scenes — the same degradation
+      // as a failed import, just later.
+      renderer.domElement.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        beacon("peel-context-lost");
+        peelRef.current = null;
+        mediaEl.classList.remove(styles.peelOn);
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+      });
       ro = new ResizeObserver(resize);
       ro.observe(mount);
       resize();
@@ -1931,7 +1949,25 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
         },
         () => geo?.dispose(),
       ];
-    })();
+    };
+
+    // Deferred until the intro gate has actually LEFT. This effect fetches
+    // ~1 MB of story photos plus the three.js chunk, and running it at mount
+    // put all of that inside the intro's own media window — starving the
+    // crank/stinger on slow links AND fetching the DESKTOP photo set on
+    // phones, because the desktop tree mounts first and the posture remount
+    // only lands afterwards (probed live: a cold mobile load transferred
+    // ~1.4 MB more than desktop). After dismissal the pipe is idle and the
+    // mounted tree is the real posture. whenIntroDismissed() resolves on
+    // every real end — clip finished, failure, Escape, deadline, no gate at
+    // all — and the one path that never resolves it (nobody ever clicks)
+    // leaves the visitor behind the opaque gate, where the peel is
+    // unreachable anyway. The peel keeps its own fallback: arriving at the
+    // story before boot() finishes just means the CSS crossfade carries the
+    // scene until the renderer is ready.
+    whenIntroDismissed().then(() => {
+      if (alive) void boot();
+    });
 
     return () => {
       alive = false;
@@ -1982,15 +2018,19 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
     wrap.style.transform = "";
     for (const c of curtains) c.style.transform = ""; // panels back down
 
-    // Catastrophe net: nothing else on the site sets body.position — the
-    // navbar and intro-gate only write body.overflow — so a leftover "fixed"
-    // here can
-    // ONLY be a pin a previous run somehow failed to release, which would
-    // freeze the WHOLE page with no recovery but reload. Clear it before
-    // anything else and restore the exact scroll it was showing (parsed back
-    // out of body.top), so recovery is jump-free too. Runs before the
-    // reduced-motion bail so it heals that path too.
-    if (document.body.style.position === "fixed") {
+    // Catastrophe net: a leftover "fixed" here that no LIVE holdScroll owns
+    // can only be a pin a previous run failed to release, which would freeze
+    // the WHOLE page with no recovery but reload. Clear it before anything
+    // else and restore the exact scroll it was showing (parsed back out of
+    // body.top), so recovery is jump-free too. Runs before the
+    // reduced-motion bail so it heals that path too. hasLiveHold() is the
+    // ownership check: a posture remount CAN legitimately mount this section
+    // while another section's arrival hold is mid-entrance, and ripping that
+    // pin out would corrupt the other owner's release (the old comment's
+    // "nothing else sets body.position" stopped being true when holdScroll
+    // shipped).
+    if (document.body.style.position === "fixed" && !hasLiveHold()) {
+      beacon("evan-net-trip");
       const leakedY = -Number.parseFloat(document.body.style.top || "0") || 0;
       const b0 = document.body.style;
       b0.position = "";
@@ -2219,7 +2259,15 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
       settleToTop();
       Promise.race([
         document.fonts.ready,
-        new Promise((resolve) => setTimeout(resolve, 600)),
+        // 1500, not the house 600: the statement's word masks are measured
+        // ONCE, right here — there is no re-split when Satoshi lands late
+        // (the step words re-measure on fonts.ready; these don't) — and a
+        // lost race on a cold cache reflows words inside overflow-hidden
+        // masks mid-statement: the "text masks leave fragments" report. The
+        // page is already held behind the arrival lock, so the extra wait is
+        // invisible except on a genuinely font-less network, where 1.5s is
+        // still a bounded cost.
+        new Promise((resolve) => setTimeout(resolve, 1500)),
       ]).then(() => {
         if (cancelled) {
           releaseIntro();
