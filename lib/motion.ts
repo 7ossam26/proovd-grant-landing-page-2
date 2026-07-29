@@ -198,6 +198,36 @@ export function splitWords(el: HTMLElement): WordSplit {
 const holdGlideMs = (gap: number, h: number) =>
   200 + 260 * Math.min(1, gap / (0.62 * h));
 
+/** A stood-down hold defers its entrance cue until the page is free AND the
+ *  section is actually near the viewport (see below) — but never longer than
+ *  this. The cap is the fail-open: a deferred cue can never strand a parked
+ *  section; the worst case is an entrance that plays this late, at rest. */
+const STANDDOWN_CAP_MS = 4000;
+
+/** The glides announce the VIRTUAL scroll position on this private channel.
+ *  A pinned body emits no real `scroll` events, so the navbar — the page's
+ *  always-on passive scroll reader — went blind through every hold and
+ *  snapped to its new state on release ("the nav bar glitches"). The channel
+ *  is deliberately NOT a synthetic window `scroll` event: broadcasting a
+ *  fake scroll wakes EVERY scroll reader on the page while window.scrollY is
+ *  frozen at 0 under the pin, which repaints scroll-driven sections against
+ *  a position that does not exist. Subscribers opt in; nothing else can be
+ *  startled. */
+export const VSCROLL_EVENT = "proovd:vscroll";
+const pokeVScroll = () => {
+  window.dispatchEvent(new Event(VSCROLL_EVENT));
+};
+
+/** How many holdScroll pins are CURRENTLY live. The Evan section's
+ *  catastrophe net clears any body pin it finds at mount on the theory that
+ *  it can only be a leak — which was written when nothing else pinned the
+ *  body. holdScroll does now, and a posture remount (rotation across 700px)
+ *  can mount Evan while another section legitimately holds the page; ripping
+ *  that pin out mid-entrance would corrupt the other owner's release. The
+ *  net consults this instead of guessing from the styles. */
+let liveHolds = 0;
+export const hasLiveHold = (): boolean => liveHolds > 0;
+
 export function holdScroll(
   ms: number,
   target: HTMLElement,
@@ -207,6 +237,7 @@ export function holdScroll(
   let lockedY = 0; // the virtual scroll while pinned; body.top === -lockedY
   let raf = 0;
   let timer = 0;
+  const born = performance.now();
 
   const release = () => {
     if (raf) cancelAnimationFrame(raf);
@@ -215,6 +246,7 @@ export function holdScroll(
     timer = 0;
     if (!held) return;
     held = false;
+    liveHolds--;
     const b = document.body.style;
     b.position = "";
     b.top = "";
@@ -224,19 +256,23 @@ export function holdScroll(
     // unpin and restore in the SAME synchronous tick — coalesced into one
     // paint, so the scrollY-0 intermediate never shows (the Evan lesson)
     window.scrollTo(0, lockedY);
+    pokeVScroll(); // subscribers re-sync to the real position immediately
   };
 
   const settled = () => {
+    // may be re-arming the pin-time safety timer below to the precise `ms`
+    if (timer) clearTimeout(timer);
     timer = window.setTimeout(release, ms);
     onSettled?.();
   };
 
   // someone else already owns the page (the Evan statement's own hold, or a
   // neighbouring section's): stacking a second pin would read scrollY as 0
-  // and restore the document top on release. Stand down — but the entrance
-  // still gets its cue, or a one-off collision would cost it its opening.
+  // and restore the document top on release. Stand down — see the deferred
+  // cue at the bottom.
   if (document.body.style.position !== "fixed") {
     held = true;
+    liveHolds++;
     lockedY = window.scrollY;
     // measured BEFORE the pin, though pinning moves nothing: body.top exactly
     // compensates the scroll it replaces
@@ -255,11 +291,20 @@ export function holdScroll(
       const y0 = lockedY;
       const t0 = performance.now();
       const dur = holdGlideMs(gap, window.innerHeight);
+      // Armed at PIN time, not at the landing: the glide below is rAF-driven,
+      // and a tab hidden mid-glide suspends rAF — settled() then never runs,
+      // and the old code armed the release timer ONLY there, leaving the body
+      // position:fixed with no belt at all until the tab was fronted again.
+      // This wall-clock timer guarantees a pinned body can never outlive its
+      // hold; settled() re-arms it to the precise `ms` on a normal landing.
+      timer = window.setTimeout(release, ms + dur + 1500);
       const step = (now: number) => {
         if (!held) return; // released mid-glide (unmount): stop writing
         const t = Math.min(1, (now - t0) / dur);
         lockedY = y0 + gap * easeFn.out2(t);
         document.body.style.top = `${-lockedY}px`;
+        // the navbar tracks the glide instead of snapping after it
+        pokeVScroll();
         if (t < 1) {
           raf = requestAnimationFrame(step);
           return;
@@ -270,8 +315,29 @@ export function holdScroll(
       raf = requestAnimationFrame(step);
       return release;
     }
+    settled();
+    return release;
   }
-  settled();
+
+  // THE DEFERRED CUE. Firing onSettled immediately while another owner's
+  // glide is still moving body.top moves every rect on the page, so THIS
+  // section's IntersectionObserver had often tripped a full viewport early
+  // and its one-shot entrance played off-screen, mid-flight — by the time
+  // the reader arrived it was spent ("the sections on the phone glitch so
+  // bad", diagnosed live in c7fdd4d). Wait until the page is free AND the
+  // section is genuinely entering the viewport; STANDDOWN_CAP_MS is the
+  // fail-open so a lost cue can never leave a section parked forever.
+  const waitFree = () => {
+    raf = 0;
+    const free = document.body.style.position !== "fixed";
+    const near = target.getBoundingClientRect().top < window.innerHeight;
+    if ((free && near) || performance.now() - born > STANDDOWN_CAP_MS) {
+      settled();
+      return;
+    }
+    raf = requestAnimationFrame(waitFree);
+  };
+  raf = requestAnimationFrame(waitFree);
   return release;
 }
 
