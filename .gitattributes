@@ -1,0 +1,10 @@
+# Keep source files LF on disk so Biome's formatter and Git agree on every
+# platform — without this, a Windows checkout re-materializes CRLF and
+# `npm run lint` fails on files nobody edited.
+*.ts text eol=lf
+*.tsx text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.mjs text eol=lf
+*.yml text eol=lf
