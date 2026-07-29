@@ -149,10 +149,13 @@ export default function RootLayout({
             NO <link rel="preload" as="video">. A preload link can express
             `media` but not Save-Data or prefers-reduced-motion, `as="video"`
             support is uneven, and `as="fetch"` risks a double fetch.
-            intro-gate.tsx ships the <video> with preload="none" and flips it
-            to "auto" from its effect — the only approach that can respect
-            BOTH preferences, and it still gets the whole time a human spends
-            reading two buttons to buffer 1.6 MB. What that flip fills is the
+            intro-gate.tsx ships the <video> with preload="none"; the
+            parse-time MEDIA_KICK script in app/page.tsx arms it (same
+            Save-Data/reduced-motion/tablet gates, checked in real JS — which
+            a preload link cannot express) the moment the gate's markup
+            exists, and the gate's effect only re-arms if the kick didn't
+            run. Probed live: hydration lands seconds late on slow links, and
+            an arm that waits for it loses the intro's own media races. What that flip fills is the
             element's own buffer, which is what the readyState check before
             play() actually reads; a link preload would not. */}
         <link
@@ -160,6 +163,13 @@ export default function RootLayout({
           as="image"
           href="/assets/btn%20texture.png"
           fetchPriority="high"
+          // Phones don't get the head start: ≤700px this 135 KB PNG competed
+          // at high priority with the 768 KB crank clip on exactly the
+          // posture/network class where the intro's media race is tightest
+          // (probed live). The phone tiles still get their texture — the CSS
+          // fetches it when the stylesheet applies, just not ahead of the
+          // clips.
+          media="(min-width: 701px)"
         />
         {/* Desktop deliberately preloads NOTHING for the hero backdrop: on
             the clip path it is the stinger's own last frame, snapshotted out
