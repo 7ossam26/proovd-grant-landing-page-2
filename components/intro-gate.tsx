@@ -362,8 +362,21 @@ export function IntroGate() {
     // Kept as a resolved no-op so every call site's sequencing is unchanged.
     const loadStill = (): Promise<unknown> => Promise.resolve();
     // Already know there will be no frame? Start it now, while the gate is
-    // still opaque, so the cut has something decoded to land on.
-    if (!allowClip) loadStill();
+    // still opaque, so the cut has something decoded to land on. And if the
+    // parse-time kick armed a fetch this client must not spend — a rotation
+    // into the tablet band between parse and hydration — ABORT it (per spec:
+    // removing src and calling load() empties the element mid-download).
+    if (!allowClip) {
+      loadStill();
+      if (video?.currentSrc) {
+        try {
+          video.removeAttribute("src");
+          video.load();
+        } catch {
+          /* nothing to abort */
+        }
+      }
+    }
 
     const onReady = () => startClip();
     const onEnded = () => {
@@ -453,7 +466,20 @@ export function IntroGate() {
       fn?.();
     };
     const hideCrank = () => {
-      if (crank) crank.style.display = "none";
+      if (crank) {
+        crank.style.display = "none";
+        // a hidden clip must not keep DOWNLOADING either — the parse-time
+        // kick may have started a fetch this client isn't going to show
+        // (guarded on currentSrc, so an abort-triggered re-entry is a no-op)
+        if (crank.currentSrc) {
+          try {
+            crank.removeAttribute("src");
+            crank.load();
+          } catch {
+            /* nothing to abort */
+          }
+        }
+      }
       crankIsReady(); // a hidden clip must not keep the tiles waiting
     };
     const beginChoosing = () => {
@@ -698,6 +724,14 @@ export function IntroGate() {
         painted,
         snapshot: heroDecodedRef.current,
         hardCut: cutOnEndedRef.current,
+        // where playback actually stood at the exit — field data for the
+        // open policy question of whether a T.video cut mid-clip should keep
+        // its frame (it currently does; see finish())
+        t: video ? Math.round(video.currentTime * 100) / 100 : null,
+        d:
+          video && Number.isFinite(video.duration)
+            ? Math.round(video.duration * 100) / 100
+            : null,
       });
       // Stop decoding behind an invisible overlay during the 0.34s between
       // `done` and `gone`. Guarded on `started` so jsdom's unimplemented

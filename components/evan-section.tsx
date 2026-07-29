@@ -1599,6 +1599,10 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
         beacon("peel-fallback", { stage: "import" });
         return;
       }
+      // A posture remount while the chunk was in flight killed this instance;
+      // without this check the dead posture's ~1 MB photo set below would
+      // still be fetched in parallel with the live instance's.
+      if (!alive) return;
       const loadImg = (src: string) =>
         new Promise<HTMLImageElement>((res, rej) => {
           const im = new Image();
@@ -1822,6 +1826,10 @@ function EvanStory({ posture }: { posture: "desktop" | "phone" }) {
         mediaEl.classList.remove(styles.peelOn);
         if (raf) cancelAnimationFrame(raf);
         raf = 0;
+        // the scenes come back carrying whatever inline state their LAST
+        // crossfade paint left (often scene 0 from mount) — repaint them at
+        // the CURRENT story position now, because at rest nothing else will
+        updateRef.current();
       });
       ro = new ResizeObserver(resize);
       ro.observe(mount);

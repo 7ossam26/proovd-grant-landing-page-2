@@ -259,11 +259,23 @@ export function holdScroll(
     pokeVScroll(); // subscribers re-sync to the real position immediately
   };
 
+  // The entrance cue fires exactly once, whichever path gets there first —
+  // a landing, the stand-down deferral, or the pin-time safety belt. A
+  // released pin with a skipped cue would strand every section that reveals
+  // its parked content inside onSettled (creators/days/guides), which is
+  // strictly worse than the mis-timed entrance it avoids.
+  let cued = false;
+  const cue = () => {
+    if (cued) return;
+    cued = true;
+    onSettled?.();
+  };
+
   const settled = () => {
     // may be re-arming the pin-time safety timer below to the precise `ms`
     if (timer) clearTimeout(timer);
     timer = window.setTimeout(release, ms);
-    onSettled?.();
+    cue();
   };
 
   // someone else already owns the page (the Evan statement's own hold, or a
@@ -297,7 +309,14 @@ export function holdScroll(
       // position:fixed with no belt at all until the tab was fronted again.
       // This wall-clock timer guarantees a pinned body can never outlive its
       // hold; settled() re-arms it to the precise `ms` on a normal landing.
-      timer = window.setTimeout(release, ms + dur + 1500);
+      // The belt MUST cue before it releases (see cue above).
+      timer = window.setTimeout(
+        () => {
+          cue();
+          release();
+        },
+        ms + dur + 1500,
+      );
       const step = (now: number) => {
         if (!held) return; // released mid-glide (unmount): stop writing
         const t = Math.min(1, (now - t0) / dur);
