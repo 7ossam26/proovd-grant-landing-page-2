@@ -13,9 +13,15 @@ type StoryCopy = {
   body: string;
 };
 
+type StoryImage = {
+  src: string;
+  width: number;
+  height: number;
+};
+
 type StoryBeat = StoryCopy & {
-  desktopImg: string;
-  mobileImg: string;
+  desktopImg: StoryImage;
+  mobileImg: StoryImage;
 };
 
 const IDEA_COPY: StoryCopy[] = [
@@ -66,26 +72,30 @@ const PRODUCT_COPY: StoryCopy[] = [
 ];
 
 const DESKTOP_IMAGES = [
-  "/assets/Evan_idea_desktop.webp",
-  "/assets/even_saying_idea_desktop.webp",
-  "/assets/campaign_evan_desktop.webp",
-  "/assets/Money_Evan_desktop.webp",
+  { src: "/assets/Evan_idea_desktop.webp", width: 1115, height: 1165 },
+  {
+    src: "/assets/even_saying_idea_desktop.webp",
+    width: 1225,
+    height: 1165,
+  },
+  { src: "/assets/campaign_evan_desktop.webp", width: 1225, height: 1165 },
+  { src: "/assets/Money_Evan_desktop.webp", width: 1225, height: 1165 },
 ];
 
 const MOBILE_IMAGES = [
-  "/assets/Evan_idea_mobile.webp",
-  "/assets/even_saying_idea_mobile.webp",
-  "/assets/campaign_evan_mobile.webp",
-  "/assets/money_evan_mobile.webp",
+  { src: "/assets/Evan_idea_mobile.webp", width: 1118, height: 618 },
+  { src: "/assets/even_saying_idea_mobile.webp", width: 1118, height: 618 },
+  { src: "/assets/campaign_evan_mobile.webp", width: 1118, height: 618 },
+  { src: "/assets/money_evan_mobile.webp", width: 1118, height: 618 },
 ];
 
 const DESKTOP_PRODUCT_IMAGES = [
-  "/assets/Product_evan_desktop.webp",
+  { src: "/assets/Product_evan_desktop.webp", width: 1225, height: 1165 },
   ...DESKTOP_IMAGES.slice(1),
 ];
 
 const MOBILE_PRODUCT_IMAGES = [
-  "/assets/Product_evan_mobile.webp",
+  { src: "/assets/Product_evan_mobile.webp", width: 1118, height: 618 },
   ...MOBILE_IMAGES.slice(1),
 ];
 
@@ -113,13 +123,18 @@ function buildStory(mode: Mode): StoryBeat[] {
 function StoryPicture({ beat, eager }: { beat: StoryBeat; eager: boolean }) {
   return (
     <picture>
-      <source media="(max-width: 700px)" srcSet={beat.mobileImg} />
+      <source
+        media="(max-width: 700px)"
+        srcSet={beat.mobileImg.src}
+        width={beat.mobileImg.width}
+        height={beat.mobileImg.height}
+      />
       <img
         className={styles.sceneImg}
-        src={beat.desktopImg}
+        src={beat.desktopImg.src}
         alt={beat.alt}
-        width={906}
-        height={862}
+        width={beat.desktopImg.width}
+        height={beat.desktopImg.height}
         decoding="async"
         loading={eager ? "eager" : "lazy"}
       />

@@ -86,23 +86,18 @@
 .mediaFrame {
   position: relative;
   width: min(100%, 36rem);
-  aspect-ratio: 825 / 862;
-  overflow: hidden;
   justify-self: end;
-  -webkit-mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
-  mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
 }
 
 .mediaFrame picture {
   display: block;
   width: 100%;
-  height: 100%;
 }
 
 .sceneImg {
+  display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
 }
 
 .copy {
@@ -296,7 +291,6 @@
 
   .mediaFrame {
     width: min(94vw, 31rem);
-    aspect-ratio: 380 / 210;
     justify-self: center;
   }
 
