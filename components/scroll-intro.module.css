@@ -1,0 +1,36 @@
+.track {
+  position: relative;
+  isolation: isolate;
+}
+
+.stage {
+  position: relative;
+}
+
+/* JavaScript only adds the enhanced state when motion is allowed and a
+   section has successfully attached its scroll reader. The static and
+   reduced-motion versions therefore stay ordinary one-screen sections. */
+.track[data-enhanced="true"] {
+  height: calc(var(--intro-screens, 2) * 100svh);
+}
+
+.track[data-enhanced="true"] > .stage {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .track[data-enhanced="true"] {
+    height: auto;
+  }
+
+  .track[data-enhanced="true"] > .stage {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}

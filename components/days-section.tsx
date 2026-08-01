@@ -10,6 +10,7 @@ import {
   splitWords,
   type WordSplit,
 } from "@/lib/motion";
+import { bindScrollIntro, smoothstep } from "@/lib/scroll-intro";
 import { siteConfig } from "@/lib/site-config";
 import styles from "./days-section.module.css";
 
@@ -37,6 +38,72 @@ export function DaysSection() {
     const sub = root.querySelector<HTMLElement>("[data-sub]");
     const cta = root.querySelector<HTMLElement>("[data-cta]");
     const cover = root.querySelector<HTMLElement>("[data-cover]");
+
+    if (root.closest("[data-scroll-intro]") && mask && bg && title) {
+      root.classList.add(styles.isLive);
+      const scrollSplit = splitWords(title);
+      const words = scrollSplit.words;
+
+      const stop = bindScrollIntro(root, (progress) => {
+        const reveal = smoothstep(0.02, 0.4, progress);
+        const left = 49.25 - 60 * reveal;
+        const right = 50.75 + 60 * reveal;
+        const top = 49 - 60 * reveal;
+        const bottom = 51 + 60 * reveal;
+
+        if (cover) {
+          cover.style.visibility = reveal >= 0.995 ? "hidden" : "visible";
+          cover.style.clipPath =
+            "polygon(evenodd, 0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, " +
+            `${left.toFixed(2)}% ${top.toFixed(2)}%, ` +
+            `${left.toFixed(2)}% ${bottom.toFixed(2)}%, ` +
+            `${right.toFixed(2)}% ${bottom.toFixed(2)}%, ` +
+            `${right.toFixed(2)}% ${top.toFixed(2)}%, ` +
+            `${left.toFixed(2)}% ${top.toFixed(2)}%)`;
+        }
+
+        bg.style.transform = `scale(${(1.08 - reveal * 0.08).toFixed(4)})`;
+
+        words.forEach((word, index) => {
+          const wordProgress = smoothstep(
+            0.22 + index * 0.06,
+            0.52 + index * 0.06,
+            progress,
+          );
+          word.style.transform = `translate3d(0, ${(
+            (1 - wordProgress) * 130
+          ).toFixed(2)}%, 0)`;
+        });
+
+        if (sub) {
+          const subProgress = smoothstep(0.46, 0.72, progress);
+          sub.style.opacity = subProgress.toFixed(4);
+          sub.style.transform = `translate3d(0, ${(
+            (1 - subProgress) * 20
+          ).toFixed(2)}px, 0)`;
+        }
+        if (cta) {
+          const ctaProgress = smoothstep(0.58, 0.84, progress);
+          cta.style.opacity = ctaProgress.toFixed(4);
+          cta.style.transform = `translate3d(0, ${(
+            (1 - ctaProgress) * 20
+          ).toFixed(2)}px, 0)`;
+        }
+      });
+
+      return () => {
+        stop();
+        root.classList.remove(styles.isLive);
+        scrollSplit.revert();
+        cover?.style.removeProperty("visibility");
+        cover?.style.removeProperty("clip-path");
+        bg.style.removeProperty("transform");
+        for (const element of [sub, cta]) {
+          element?.style.removeProperty("opacity");
+          element?.style.removeProperty("transform");
+        }
+      };
+    }
 
     // ── the arrival: the pinhole reveal (owner: "a very tiny clip mask
     // square that grows until it shows the entire section underneath and

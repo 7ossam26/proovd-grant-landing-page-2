@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { EASE, holdScroll, onceInView, park, playFrom } from "@/lib/motion";
+import { bindScrollIntro, smoothstep } from "@/lib/scroll-intro";
 import styles from "./guides-section.module.css";
 
 // The eight guides every founder gets — the deck the stack deals through.
@@ -97,6 +98,7 @@ export function GuidesSection() {
     let t0 = 0;
     let pausedAt = 0;
     let cancelInView: (() => void) | undefined;
+    let cancelScrollIntro: (() => void) | undefined;
     let releaseHold: (() => void) | undefined;
     const anims: Animation[] = [];
     const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -206,44 +208,71 @@ export function GuidesSection() {
       // glides the section onto the viewport top, and only then do the copy
       // and the deck rise — heading, sub, panel, staggered. The hold
       // releases just after the last one lands, and scroll is free again.
-      if (heading) park(heading, { opacity: 0, transform: "translateY(18px)" });
-      if (sub) park(sub, { opacity: 0, transform: "translateY(16px)" });
-      if (stack) park(stack, { opacity: 0, transform: "translateY(26px)" });
-      cancelInView = onceInView(root, 72, () => {
-        releaseHold = holdScroll(1000, root, () => {
-          try {
-            if (heading) {
-              anims.push(
-                playFrom(
-                  heading,
-                  { opacity: 0, transform: "translateY(18px)" },
-                  { duration: 0.5, ease: EASE.out3 },
-                ),
-              );
-            }
-            if (sub) {
-              anims.push(
-                playFrom(
-                  sub,
-                  { opacity: 0, transform: "translateY(16px)" },
-                  { duration: 0.5, delay: 0.12, ease: EASE.out3 },
-                ),
-              );
-            }
-            if (stack) {
-              anims.push(
-                playFrom(
-                  stack,
-                  { opacity: 0, transform: "translateY(26px)" },
-                  { duration: 0.6, delay: 0.2, ease: EASE.out3 },
-                ),
-              );
-            }
-          } catch {
-            failOpen();
+      if (root.closest("[data-scroll-intro]")) {
+        cancelScrollIntro = bindScrollIntro(root, (progress) => {
+          if (heading) {
+            const reveal = smoothstep(0.06, 0.38, progress);
+            heading.style.opacity = reveal.toFixed(4);
+            heading.style.transform = `translate3d(0, ${(
+              (1 - reveal) * 28
+            ).toFixed(2)}px, 0)`;
+          }
+          if (sub) {
+            const reveal = smoothstep(0.2, 0.53, progress);
+            sub.style.opacity = reveal.toFixed(4);
+            sub.style.transform = `translate3d(0, ${((1 - reveal) * 24).toFixed(
+              2,
+            )}px, 0)`;
+          }
+          if (stack) {
+            const reveal = smoothstep(0.32, 0.72, progress);
+            stack.style.opacity = reveal.toFixed(4);
+            stack.style.transform = `translate3d(0, ${(
+              (1 - reveal) * 42
+            ).toFixed(2)}px, 0) scale(${(0.94 + reveal * 0.06).toFixed(4)})`;
           }
         });
-      });
+      } else {
+        if (heading)
+          park(heading, { opacity: 0, transform: "translateY(18px)" });
+        if (sub) park(sub, { opacity: 0, transform: "translateY(16px)" });
+        if (stack) park(stack, { opacity: 0, transform: "translateY(26px)" });
+        cancelInView = onceInView(root, 72, () => {
+          releaseHold = holdScroll(1000, root, () => {
+            try {
+              if (heading) {
+                anims.push(
+                  playFrom(
+                    heading,
+                    { opacity: 0, transform: "translateY(18px)" },
+                    { duration: 0.5, ease: EASE.out3 },
+                  ),
+                );
+              }
+              if (sub) {
+                anims.push(
+                  playFrom(
+                    sub,
+                    { opacity: 0, transform: "translateY(16px)" },
+                    { duration: 0.5, delay: 0.12, ease: EASE.out3 },
+                  ),
+                );
+              }
+              if (stack) {
+                anims.push(
+                  playFrom(
+                    stack,
+                    { opacity: 0, transform: "translateY(26px)" },
+                    { duration: 0.6, delay: 0.2, ease: EASE.out3 },
+                  ),
+                );
+              }
+            } catch {
+              failOpen();
+            }
+          });
+        });
+      }
 
       paint(0); // park the deck's first frame before paint, card one standing
       io.observe(root);
@@ -255,6 +284,7 @@ export function GuidesSection() {
       io.disconnect();
       if (raf) cancelAnimationFrame(raf);
       cancelInView?.();
+      cancelScrollIntro?.();
       releaseHold?.(); // a body left position:fixed freezes the whole site
       for (const a of anims) a.cancel();
       clearCards();

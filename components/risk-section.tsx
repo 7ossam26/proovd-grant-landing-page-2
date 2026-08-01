@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import { EASE, holdScroll, onceInView, park, playTo } from "@/lib/motion";
+import { bindScrollIntro, clamp01, smoothstep } from "@/lib/scroll-intro";
 import styles from "./risk-section.module.css";
 
 const STICKERS = [
@@ -124,6 +125,113 @@ export function RiskSection() {
     );
     const kicker = root.querySelector<HTMLElement>("[data-kicker]");
     if (!title || !strip || !words.length) return;
+
+    // Inside <ScrollIntro>, native scroll position owns every beat. Keep the
+    // original timed engine below as a standalone fallback, but the homepage
+    // path never pins the body or starts a clock-driven entrance.
+    if (root.closest("[data-scroll-intro]")) {
+      const doors = Array.from(
+        root.querySelectorAll<HTMLElement>("[data-door]"),
+      );
+      root.classList.add(styles.isLive);
+      strip.style.visibility = "visible";
+
+      const stop = bindScrollIntro(root, (progress) => {
+        const doorProgress = smoothstep(0.02, 0.2, progress);
+        doors.forEach((door) => {
+          const direction = door.dataset.door === "l" ? -1 : 1;
+          door.style.transform = `translate3d(${(
+            direction * doorProgress * 102
+          ).toFixed(2)}%, 0, 0)`;
+        });
+
+        const run = smoothstep(0.08, 0.56, progress);
+        const runEase = run * run * (3 - 2 * run);
+        strip.style.transform = `translate3d(calc(${(
+          100 * (1 - runEase) - 8 * runEase
+        ).toFixed(2)}vw - ${(100 * runEase).toFixed(2)}%), 0, 0)`;
+
+        const amplitude =
+          Math.min(window.innerHeight * AMP, 180) * 4 * run * (1 - run);
+        sweeps.forEach((sweep, index) => {
+          const phase = run * Math.PI * 2 + index * 0.62;
+          const y = Math.sin(phase) * amplitude;
+          const rotation = Math.cos(phase) * TILT_MAX * 4 * run * (1 - run);
+          sweep.style.transform = `translate3d(0, ${y.toFixed(
+            1,
+          )}px, 0) rotate(${rotation.toFixed(2)}deg)`;
+        });
+
+        words.forEach((word, index) => {
+          const wordProgress = smoothstep(
+            0.15 + index * 0.075,
+            0.42 + index * 0.075,
+            progress,
+          );
+          const x = (1 - wordProgress) * (window.innerWidth + 120);
+          const y = Math.sin(wordProgress * Math.PI) * -32;
+          word.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(
+            1,
+          )}px, 0) rotate(${((1 - wordProgress) * 13).toFixed(2)}deg)`;
+        });
+
+        const settle = smoothstep(0.38, 0.63, progress);
+        const big = window.innerWidth >= 900 ? 1.25 : 1.6;
+        title.style.opacity = smoothstep(0.12, 0.24, progress).toFixed(4);
+        title.style.transform = `scale(${(big + (1 - big) * settle).toFixed(
+          4,
+        )})`;
+
+        stickers.forEach((sticker, index) => {
+          const reveal = smoothstep(
+            0.53 + index * 0.035,
+            0.7 + index * 0.035,
+            progress,
+          );
+          sticker.style.opacity = reveal.toFixed(4);
+          sticker.style.transform = `scale(${reveal.toFixed(4)})`;
+        });
+
+        lines.forEach((line, index) => {
+          const reveal = smoothstep(
+            0.6 + index * 0.045,
+            0.77 + index * 0.045,
+            progress,
+          );
+          line.style.opacity = reveal.toFixed(4);
+          line.style.transform = `translate3d(0, ${((1 - reveal) * 22).toFixed(
+            2,
+          )}px, 0)`;
+        });
+
+        if (kicker) {
+          const reveal = smoothstep(0.73, 0.9, progress);
+          kicker.style.opacity = reveal.toFixed(4);
+          kicker.style.transform = `translate3d(0, ${(
+            (1 - reveal) * 18
+          ).toFixed(2)}px, 0) rotate(${(-1 * clamp01(reveal)).toFixed(2)}deg)`;
+        }
+      });
+
+      return () => {
+        stop();
+        root.classList.remove(styles.isLive);
+        strip.style.removeProperty("visibility");
+        strip.style.removeProperty("transform");
+        for (const element of [
+          ...doors,
+          ...sweeps,
+          ...words,
+          ...stickers,
+          ...lines,
+          title,
+          kicker,
+        ]) {
+          element?.style.removeProperty("opacity");
+          element?.style.removeProperty("transform");
+        }
+      };
+    }
 
     let cancelled = false;
     let cancelInView: (() => void) | undefined;

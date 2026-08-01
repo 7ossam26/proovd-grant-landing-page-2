@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { easeFn, holdScroll, onceInView } from "@/lib/motion";
+import { bindScrollIntro, smoothstep } from "@/lib/scroll-intro";
 import { siteConfig } from "@/lib/site-config";
 import car from "./creators-carousel.module.css";
 import styles from "./creators-section.module.css";
@@ -240,6 +241,9 @@ function CreatorsDesktop() {
     const wheel = root.querySelector<HTMLElement>("[data-wheel]");
     const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-card]"));
     if (!wheel || !cards.length) return;
+    const heading = root.querySelector<HTMLElement>(`.${styles.heading}`);
+    const pitch = root.querySelector<HTMLElement>(`.${styles.pitch}`);
+    const cta = root.querySelector<HTMLElement>(`.${styles.cta}`);
     const photos = cards.map((c) =>
       c.querySelector<HTMLElement>("[data-photo]"),
     );
@@ -354,6 +358,7 @@ function CreatorsDesktop() {
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    const scrollDriven = Boolean(root.closest("[data-scroll-intro]"));
 
     // ── the entrance (owner: "an animation intro like this one but for the
     // desktop version where it spins with the arc already there but bigger
@@ -399,8 +404,11 @@ function CreatorsDesktop() {
     // jsdom matchMedia stub reports reduced motion, so unit tests keep
     // today's static tree. Below 900px the layout differs (and 701–1023px is
     // behind the tablet block), so the geometry this assumes doesn't hold.
-    const introOn = !reduced && window.matchMedia("(min-width: 900px)").matches;
-    if (introOn) {
+    const introOn =
+      !scrollDriven &&
+      !reduced &&
+      window.matchMedia("(min-width: 900px)").matches;
+    if (introOn || (scrollDriven && !reduced)) {
       root.classList.add(styles.isLive);
       state.off = INTRO_SLOTS * SLOT;
       unfold = 0;
@@ -425,6 +433,8 @@ function CreatorsDesktop() {
     let glideFrom = 0; // state.off at the top of the current glide
     let lastTick = 0;
     let pausedAt = 0;
+    let stopScrollIntro: (() => void) | undefined;
+    let inView = false;
 
     const tick = (now: number) => {
       if (intro) {
@@ -552,28 +562,88 @@ function CreatorsDesktop() {
     // the section has pinned — which is what collapses "in the middle" to a
     // pure horizontal translate. At 70% the whole entrance would play about
     // a viewport below the fold.
-    const stopWatch = onceInView(root, 5, startIntro);
+    const stopWatch = scrollDriven ? () => {} : onceInView(root, 5, startIntro);
 
     // spin only while the section is anywhere near the viewport (any
     // intersection at all — the old top/bottom-to-bottom/top window)
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
-        if (entry.isIntersecting) play();
+        inView = entry.isIntersecting;
+        if (inView) play();
         else pause();
       }
     });
     io.observe(root);
 
+    if (scrollDriven && !reduced) {
+      stopScrollIntro = bindScrollIntro(root, (progress) => {
+        const introProgress = smoothstep(0.02, 0.76, progress);
+        const spinProgress = Math.min(1, introProgress / 0.62);
+        const spinEase = 1 - (1 - spinProgress) ** 4;
+        const settleProgress = clamp01((introProgress - 0.28) / 0.72);
+        const settle = easeFn.inOut2(settleProgress);
+
+        if (introProgress < 0.999) {
+          pause();
+          armed = false;
+          started = false;
+          state.off = INTRO_SLOTS * SLOT * (1 - spinEase);
+          unfold = clamp01((introProgress - 0.72) / 0.28);
+          const scale = INTRO_SCALE + (1 - INTRO_SCALE) * settle;
+          wheel.style.transform =
+            `translateX(${(introDx * (1 - settle)).toFixed(2)}px)` +
+            ` scale(${scale.toFixed(4)}) rotate(${(
+              INTRO_ROT * (1 - settle)
+            ).toFixed(2)}deg)`;
+          update();
+        } else {
+          state.off = 0;
+          unfold = 1;
+          wheel.style.transform = "";
+          update();
+          if (!armed) {
+            armed = true;
+            started = false;
+            if (inView) play();
+          }
+        }
+
+        const wheelReveal = smoothstep(0.01, 0.2, progress);
+        wheel.style.opacity = wheelReveal.toFixed(4);
+        const paintCopy = (
+          element: HTMLElement | null,
+          from: number,
+          to: number,
+        ) => {
+          if (!element) return;
+          const reveal = smoothstep(from, to, progress);
+          element.style.opacity = reveal.toFixed(4);
+          element.style.transform = `translate3d(0, ${(
+            (1 - reveal) * 24
+          ).toFixed(2)}px, 0)`;
+        };
+        paintCopy(heading, 0.22, 0.45);
+        paintCopy(pitch, 0.34, 0.58);
+        paintCopy(cta, 0.46, 0.7);
+      });
+    }
+
     return () => {
       cancelAnimationFrame(raf);
       stopWatch();
+      stopScrollIntro?.();
       io.disconnect();
       ro.disconnect();
       if (blankTimer) clearTimeout(blankTimer);
       releaseHold?.(); // a body left position:fixed freezes the whole site
       // never leave the arc parked, scaled, or mid-flight
       wheel.style.transform = "";
+      wheel.style.removeProperty("opacity");
       wheel.style.transformOrigin = "";
+      for (const element of [heading, pitch, cta]) {
+        element?.style.removeProperty("opacity");
+        element?.style.removeProperty("transform");
+      }
       root.classList.remove(styles.isLive);
       root.removeAttribute("data-in");
     };
@@ -691,6 +761,10 @@ function CreatorsCarousel() {
     const probe = root.querySelector<HTMLElement>("[data-probe]");
     const probePanel = root.querySelector<HTMLElement>("[data-probe-panel]");
     const cards = Array.from(root.querySelectorAll<HTMLElement>("[data-card]"));
+    const headline = root.querySelector<HTMLElement>(`.${car.headline}`);
+    const pitch = root.querySelector<HTMLElement>(`.${car.pitch}`);
+    const ctaWrap = root.querySelector<HTMLElement>(`.${car.ctaWrap}`);
+    const hint = root.querySelector<HTMLElement>(`.${car.hint}`);
 
     const cleanups: Array<() => void> = [];
     const on = (
@@ -735,7 +809,8 @@ function CreatorsCarousel() {
       const INTRO_SCALE = 2.4; // starts oversized (clips off-screen)
       const INTRO_ROT = -7; // deg of tilt it starts with, unwinds to 0
 
-      let intro = true;
+      const scrollDriven = Boolean(root.closest("[data-scroll-intro]"));
+      let intro = !scrollDriven;
       let introT = 0;
       // the page is frozen while the drum spins in (owner) — released when
       // the spin ends, when a finger takes it over, or on unmount
@@ -972,6 +1047,7 @@ function CreatorsCarousel() {
       let started = false; // the entrance has actually begun (gates play())
       let triggered = false; // …the trigger itself fires exactly once
       let blankTimer = 0; // the white beat between the pin and the spin
+      let inView = false;
       const frame = (now: number) => {
         if (!running) return;
         raf = requestAnimationFrame(frame);
@@ -1038,6 +1114,80 @@ function CreatorsCarousel() {
         started = true;
         root.setAttribute("data-in", "1");
         draw();
+      } else if (scrollDriven) {
+        draw();
+        const stopScrollIntro = bindScrollIntro(root, (progress) => {
+          const introProgress = smoothstep(0.02, 0.74, progress);
+          const spinProgress = Math.min(1, introProgress / 0.62);
+          const settleProgress = clampN((introProgress - 0.28) / 0.72, 0, 1);
+          const spinEase = 1 - (1 - spinProgress) ** 4;
+          const settle =
+            settleProgress < 0.5
+              ? 4 * settleProgress ** 3
+              : 1 - (-2 * settleProgress + 2) ** 3 / 2;
+
+          if (introProgress < 0.999) {
+            pause();
+            started = false;
+            intro = false;
+            pos = INTRO_FROM * (1 - spinEase);
+            vel = 0;
+            target = 0;
+            locked = true;
+            open = 0;
+            hold = 0;
+            const scale = INTRO_SCALE + (1 - INTRO_SCALE) * settle;
+            scene.style.transform = `scale(${scale.toFixed(4)}) rotate(${(
+              INTRO_ROT * (1 - settle)
+            ).toFixed(2)}deg)`;
+            root.setAttribute("data-intro", "1");
+            draw();
+          } else {
+            root.removeAttribute("data-intro");
+            scene.style.transform = "";
+            pos = 0;
+            vel = 0;
+            target = 0;
+            locked = true;
+            open = 1;
+            hold = EXPAND;
+            draw();
+            if (!started) {
+              started = true;
+              if (inView) play();
+            }
+          }
+
+          const paintElement = (
+            element: HTMLElement | null,
+            from: number,
+            to: number,
+            distance = 18,
+          ) => {
+            if (!element) return;
+            const reveal = smoothstep(from, to, progress);
+            element.style.opacity = reveal.toFixed(4);
+            element.style.transform = `translate3d(0, ${(
+              (1 - reveal) * distance
+            ).toFixed(2)}px, 0)`;
+          };
+          if (stage) {
+            stage.style.opacity = smoothstep(0.01, 0.2, progress).toFixed(4);
+          }
+          paintElement(headline, 0.18, 0.42);
+          paintElement(pitch, 0.3, 0.55);
+          paintElement(ctaWrap, 0.43, 0.68);
+          paintElement(hint, 0.6, 0.82, 0);
+        });
+        cleanups.push(() => {
+          stopScrollIntro();
+          scene.style.removeProperty("transform");
+          root.removeAttribute("data-intro");
+          for (const element of [stage, headline, pitch, ctaWrap, hint]) {
+            element?.style.removeProperty("opacity");
+            element?.style.removeProperty("transform");
+          }
+        });
       } else {
         draw(); // park the drum's first frame under the still-hidden stage
         cleanups.push(onceInView(root, 70, startIntro));
@@ -1046,7 +1196,8 @@ function CreatorsCarousel() {
       // spin only while the section is anywhere near the viewport
       const io = new IntersectionObserver((entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) play();
+          inView = entry.isIntersecting;
+          if (inView) play();
           else pause();
         }
       });

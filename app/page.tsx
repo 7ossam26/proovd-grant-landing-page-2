@@ -9,6 +9,7 @@ import { IntroGate } from "@/components/intro-gate";
 import { Navbar } from "@/components/navbar";
 import { PricingSection } from "@/components/pricing-section";
 import { RiskSection } from "@/components/risk-section";
+import { ScrollIntro } from "@/components/scroll-intro";
 import { TabletBlock } from "@/components/tablet-block";
 import { FAQS } from "@/lib/faqs";
 import { JsonLd } from "@/lib/json-ld";
@@ -93,10 +94,18 @@ export default function Home() {
         <Hero />
         <Navbar />
         <EvanSection />
-        <CreatorsSection />
-        <RiskSection />
-        <DaysSection />
-        <GuidesSection />
+        <ScrollIntro name="creators" screens={2.5}>
+          <CreatorsSection />
+        </ScrollIntro>
+        <ScrollIntro name="risk" screens={2.45}>
+          <RiskSection />
+        </ScrollIntro>
+        <ScrollIntro name="days" screens={2.15}>
+          <DaysSection />
+        </ScrollIntro>
+        <ScrollIntro name="guides" screens={2.1}>
+          <GuidesSection />
+        </ScrollIntro>
         <PricingSection />
         <FaqSection />
         <HoverFX />
