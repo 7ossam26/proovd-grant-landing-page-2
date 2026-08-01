@@ -1,441 +1,94 @@
-/* Evan scroll story — styles ported from the "Proovd Scroll Storyyy"
-   reference. Two integration rules:
-   · --u replaces the reference's fluid ROOT font-size (the 1440x800 design
-     zooms uniformly, width- or height-limited): every reference `Xrem`
-     becomes `calc(X * var(--u))` so the zoom stays scoped to this section.
-   · colors resolve through proovd.css tokens. #011E0B is the one deliberate
-     literal — the navbar's nav-only color (navbar.module.css): the desktop
-     story lives on that exact surface whichever path was picked, so the
-     fixed bar blends seamlessly over it. */
+/* Evan — the scroll story.
+
+   TWO STYLESHEETS IN ONE FILE, and the split is the point:
+
+   1. THE BASE (everything outside a `[data-enhanced="true"]` selector) is a
+      plain document. Six sections in normal flow, images at natural size,
+      every word on screen. This is what a visitor sees with JavaScript off,
+      with hydration broken, with the controller thrown, and under
+      prefers-reduced-motion — which is why none of those cases needs its own
+      code path. It is not a degraded view; it is the content.
+
+   2. THE ENHANCEMENT (`.section[data-enhanced="true"] …`) turns that document
+      into a tall scroll track with a sticky stage and the scenes stacked
+      inside it. components/evan-section.tsx sets that attribute only after it
+      has bound successfully, and removes it on cleanup.
+
+   Nothing here animates on its own clock: there is not one transition or
+   keyframe on a scene, because every visual value is written per frame from
+   the scroll position. The only transitions in the file are on interactive
+   affordances (the CTA), where they belong. */
 
 .section {
-  --u: max(min(1.1111vw, 2vh), 9px);
-  --ev-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --theme-fade: 0.8s var(--ev-ease);
-  /* ONE surface whichever path was picked (owner): the navbar's #011E0B,
-     white headlines, mint body. The idea/product flip only swaps the words.
-     The opening "This is Evan…" statement is exempt — it pins its own white
-     surface on .statementWrap. */
-  --ev-bg: #011e0b;
+  --ev-bg: #011e0b; /* the navbar's surface — the story sits on it */
   --ev-ink: var(--mint);
   --ev-ink-strong: var(--white);
-  --ev-mode-ink: var(--mint);
-  --ev-track: #011e0b;
-  --ev-thumb: var(--mint);
-  --ev-thumb-ink: var(--darker);
+  /* The fixed navbar overlays the sticky stage; content clears it. Tracks the
+     navbar's own clamp (measured 83px at 1440, 66 at 390). */
+  --nav: clamp(4.25rem, 5.8vw, 6.5rem);
+  /* Scroll distance per scene. The track is one stage tall plus one span per
+     transition — see .track. */
+  --scene-span: 88svh;
+  /* SCENE_COUNT - 1 in evan-section.tsx. Five transitions, six scenes. */
+  --scene-steps: 5;
+
   position: relative;
   background: var(--ev-bg);
   color: var(--ev-ink);
   line-height: 1.6;
-  /* the curl rolls past the media panel and can poke past the viewport edge;
-     clip (NOT hidden — hidden would create a scroll container and break the
-     sticky media pin) so it leaves the screen instead of panning the page */
-  overflow-x: clip;
-  overflow-y: visible;
-  transition:
-    background-color var(--theme-fade),
-    color var(--theme-fade);
 }
 
-/* the class still lands when the product path was picked (the engine swaps
-   the copy on it) — the palette is deliberately identical now */
-.productTheme {
-  --ev-bg: #011e0b;
-  --ev-ink: var(--mint);
-  --ev-ink-strong: var(--white);
-  --ev-mode-ink: var(--mint);
-  --ev-track: #011e0b;
-  --ev-thumb: var(--mint);
-  --ev-thumb-ink: var(--darker);
-}
+/* ── base: normal flow ─────────────────────────────────────────────────── */
 
-/* Phone posture (≤700px): the story is ALWAYS the dark #001407 surface, no
-   matter which path was picked — the idea/product theme flip is disabled here
-   (both selectors are pinned to the same palette). White headlines, mint body.
-   The opening "This is Evan…" statement is exempt: it pins its own white
-   surface + dark ink on .statementWrap, which wins on that element. */
-@media (max-width: 700px) {
-  .section,
-  .section.productTheme {
-    --ev-bg: #001407;
-    --ev-ink: var(--mint);
-    --ev-ink-strong: var(--white);
-    --ev-mode-ink: var(--mint);
-    --ev-track: #001407;
-    --ev-thumb: var(--mint);
-    --ev-thumb-ink: var(--darker);
-  }
-}
-
-/* ── two-column walkthrough ─────────────────────────────────────────── */
-
-.walk {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: calc(4.375 * var(--u));
-  align-items: start;
-  max-width: calc(90 * var(--u));
-  margin: 0 auto;
-  padding: 0 calc(3 * var(--u)) 20vh;
-}
-
-.mediaGroup {
-  position: sticky;
-  top: 15vh; /* JS refines from the real nav height + measured panel */
-}
-
-.walkMedia {
-  /* the laptop photos' portrait-ish ratio (825x862); JS syncs to real dims */
-  width: min(100%, calc(70vh * 0.9571));
-  aspect-ratio: 825 / 862;
-  position: relative;
-}
-
-/* scenes crossfade on a plateau: solid while a step reads, fading only
-   between steps (JS drives opacity from --v; hidden once the peel is live) */
 .scene {
-  position: absolute;
-  inset: 0;
   display: grid;
-  place-items: center;
-  opacity: 0;
-  transform: scale(calc(0.96 + 0.04 * var(--v, 0)));
-  pointer-events: none;
-  /* No transition: the swap is a hard cut. A 0.6s crossfade here fought the
-     per-frame opacity the engine writes and left both neighbours partly
-     transparent mid-change, which is what made the picture blink. */
-  -webkit-mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
-  mask: url("/assets/stamp-mask.svg") center / 100% 100% no-repeat;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-content: center;
+  padding: clamp(3rem, 8vw, 6rem) clamp(1.25rem, 5vw, 4rem);
 }
 
-.sceneImg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%; /* the global img { height: auto } must not win here */
-  object-fit: cover;
+.statementCopy {
+  color: var(--dark);
 }
 
-.peelMount {
-  position: absolute;
-  inset: -15%; /* room for the curl to roll past the stamp edge */
-}
-
-/* Desktop: a far bigger apron, so the rolled-up sheet is never cut at an
-   invisible boundary — it rolls clear off the panel area ("peel off, not
-   masked"). The curl cylinder extends ~35% of the panel height past the
-   corner at full roll; 45% covers it with margin. Phone keeps -15%: its
-   canvas size is a measured perf budget, and its curl exits via the
-   viewport edge instead (overflow-x: clip on .section). */
-@media (min-width: 901px) {
-  .peelMount {
-    inset: -45%;
-  }
-}
-
-.peelOn .scene {
-  display: none;
-}
-
-/* progress: full-width brand-green segments fixed to the viewport bottom, on
-   EVERY posture (the treatment from the owner's pics). The engine gates its
-   opacity (E1's update) so it only shows while the story owns the viewport —
-   a position:fixed bar would otherwise float over every section. */
-.mediaCap {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  padding: calc(1.6 * var(--u)) calc(1.5 * var(--u)) calc(1.4 * var(--u));
-  opacity: 0;
-  transition: opacity 0.25s var(--ev-ease);
-  pointer-events: none;
-  /* SOLID, not transparent. The bar is fixed, so a headline scrolls under
-     it — with no background it read straight through the segments. The
-     surface matches the story's own (--ev-bg), so the band is invisible
-     except for what it hides. */
-  background: var(--ev-bg);
-}
-
-.ticks {
-  display: flex;
-  width: 100%;
-  gap: calc(0.5 * var(--u));
-}
-
-.tick {
-  flex: 1;
-  height: calc(0.375 * var(--u));
-  border-radius: 0; /* dead square — even --radius read as "a bit too round" */
-  background: color-mix(in srgb, var(--brand) 22%, transparent);
-  overflow: hidden;
-  position: relative;
-  /* the engine no longer writes the per-frame "thump"; this stays as the
-     belt-and-braces guarantee that nothing can scale a segment.
-     biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
-  transform: none !important;
-}
-
-.tick::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: var(--brand); /* brand green; the fill sweep scaleX(--tf) */
-  transform: scaleX(var(--tf, 0));
-  transform-origin: left;
-}
-
-.stepcount {
-  display: none; /* the "01 / 04" numeric counter is gone on every posture */
-}
-
-.rollBox {
-  height: 1.1em;
-  overflow: hidden;
-  display: inline-block;
-}
-
-.roll {
-  display: block;
-  will-change: transform;
-}
-
-.roll > span {
-  display: block;
-  height: 1.1em;
-  line-height: 1.1em;
-}
-
-/* ── steps column ───────────────────────────────────────────────────── */
-
-.step {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: calc(3.125 * var(--u)) 0;
-}
-
-.step + .step {
-  min-height: 82vh;
-}
-
-.step:first-child {
-  /* step 1 sits dead-center in the viewport — aligned with the sticky photo —
-     on load and whenever you scroll back up to it */
-  min-height: 100vh;
-}
-
-.headline {
-  font-weight: 900;
-  color: var(--ev-ink-strong);
-  font-size: calc(4 * var(--u));
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-  margin: 0 0 calc(1.125 * var(--u));
-  max-width: 14ch;
-  transition: color var(--theme-fade);
-}
-
-/* breathing room so ascenders/descenders aren't clipped by the word mask */
-.w {
-  display: inline-block;
-  overflow: hidden;
-  vertical-align: top;
-  padding: 0.22em 0.1em;
-  margin: -0.22em -0.1em;
-}
-
-.w > span {
-  display: inline-block;
-  will-change: transform;
-  transform-origin: 0% 100%;
-}
-
-.copyBody {
-  /* desktop reading size — bigger per the owner (was 1.25); the ≤900px
-     block below re-pins the phone at 1.4 so this only moves laptops */
-  font-size: calc(1.6 * var(--u));
-  font-weight: 500;
-  max-width: 44ch;
-  margin: 0;
-  line-height: 1.6;
-  color: var(--ev-ink);
-  will-change: transform;
-  transition: color var(--theme-fade);
-}
-
-/* (the .copyBody mark highlight sweep is gone — the shared copy is plain
-   strings with no <mark>, and the engine no longer writes --mk) */
-
-/* ── phone: single column, media pinned under the fixed nav ─────────── */
-
-@media (max-width: 900px) {
-  .section {
-    /* phone reference is 390px wide; tablets cap so type never balloons */
-    --u: clamp(14px, 4.1026vw, 19px);
-  }
-
-  .walk {
-    display: block;
-    max-width: none;
-    /* top pad drops the first panel off the navbar so the image + step-1 text
-       sit centred on load instead of jammed at the top. The bottom pad stays
-       8vh: the closing DWELL the owner asked for lives on `.step:last-child`
-       (≤700px block) instead. Two reasons it does not belong here — this
-       padding is OUTSIDE this element's content box, which is the sticky
-       constraint rect for `.mediaGroup`, so runway here would SHORTEN the
-       stamp's pinned range instead of extending it; and this block also
-       styles 701–900px, which is the tablet-blocked range, not phone. */
-    padding: 20vh calc(1.75 * var(--u)) 8vh;
-  }
-
-  /* media breaks out of the text gutters so the photo runs nearly
-     full-bleed; it pins below the (measured) navbar with its own surface */
-  .mediaGroup {
-    /* upper-middle; JS refines from the real nav height. Do NOT lower this to
-       close the gap under the stamp — the title slides UNDER this element as
-       you scroll on, and it needs that clearance to fade first. */
-    top: 20vh;
-    z-index: 5;
-    background: var(--ev-bg);
-    padding: calc(0.625 * var(--u)) 0 calc(0.375 * var(--u));
-    margin: 0 calc(-1 * var(--u));
-    transition: background-color var(--theme-fade);
-  }
-
-  .walkMedia {
-    margin: 0 auto;
-    /* NO overflow:hidden, and the peel mount keeps its base -15% inset: the
-       curling sheet must roll PAST the stamp edge (like desktop), not get
-       cropped at the panel box — clipping it there read as the picture being
-       "peeled inside a mask". The horizontal room it needs past the viewport
-       edge is clipped on .section below, so the curl leaves the screen
-       instead of causing sideways page scroll. */
-    /* natural stamp ratio (380x210); JS refines from the real dims. Near
-       full-bleed — matching layout() in evan-section.tsx. */
-    aspect-ratio: 380 / 210;
-    width: min(100%, calc(52vh * 1.8095));
-  }
-
-  .step {
-    min-height: 56vh;
-    padding: calc(1.5 * var(--u)) 0;
-  }
-
-  .step + .step {
-    min-height: 56vh;
-  }
-
-  .step:first-child {
-    /* step 1 hugs the image on load instead of floating mid-gap — kept short
-       so its centred text sits close under the stamp, not a screen away.
-       The extra top padding is load-bearing: the sticky stamp only settles at
-       its pinned height if the first title sits far enough BELOW the media in
-       the document (that distance must exceed the media's height plus the
-       reading-line offset). Without it step one lands right on the threshold
-       and can render a pixel or two un-stuck, i.e. slightly out of line with
-       every other beat. */
-    min-height: 26vh;
-    padding-top: calc(7 * var(--u));
-  }
-
-  /* Sized so a step title fits on ONE line in the phone column. The binding
-     constraint is the column itself (~334px at 390), not the 14ch max-width —
-     both are in ch, so they shrink together and the cap can never fix a wrap.
-     At 2.3 the longest idea-mode title ("Campaign goes live") needed ~366px
-     and broke to two lines; 2 fits it in ~316px. */
-  .headline {
-    font-size: calc(2.9 * var(--u));
-  }
-
-  .copyBody {
-    font-size: calc(1.4 * var(--u));
-  }
-}
-
-/* ── pre-JS / no-JS: everything readable and assembled. The engine only
-   hides/moves things (inline styles) after it adds .isLive ─────────── */
-
-/* ── opening statement — overlays the story's first viewport ─────────── */
-
-.statementWrap {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100svh;
-  /* Above the walkthrough, the mode dock AND the navbar (900). The bar now
-     follows the virtual scroll under a pin, so it stands up the moment the
-     jack lands — this keeps the opening statement the full-screen moment it
-     has always been instead of getting a bar across it. `.section` sets no
-     z-index, so this competes in the root stacking context; the intro gate
-     (1000) still wins. */
-  z-index: 950;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 calc(3 * var(--u));
-  /* The opening "This is Evan…" moment is ALWAYS on white — even when the
-     product choice has flipped the story to its dark theme (.productTheme).
-     It pins its own light surface + dark ink locally rather than following
-     the section vars, so the child .statement inherits a dark --ev-ink and
-     stays legible. The WHITE itself lives on the .curtain panels below (the
-     wrap is transparent), so the handoff can wipe it away strip by strip. */
-  --ev-bg: var(--white);
-  --ev-ink: var(--dark);
-  background: transparent;
-}
-
-/* the statement's white surface, as five curtain panels. At the handoff each
-   lifts (translateY(-102%)) on a stagger — "Curtains: Stagger" — revealing
-   the story beneath. Static until then, so they read as one solid white. */
-.curtains {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  overflow: hidden; /* the lifting panels clip crisply at the wrap edge */
-  pointer-events: none;
-}
-
-.curtain {
-  flex: 1 1 auto;
+/* The statement is a light moment. In flow it carries its own white surface;
+   once enhanced, the curtain panels below supply the white instead so the
+   handoff can wipe it away. */
+.scene[data-scene-kind="statement"] {
   background: var(--white);
 }
 
-.curtain + .curtain {
-  margin-left: -1px; /* 1px overlap — no subpixel hairline between panels */
+.curtain {
+  display: none; /* flow has nothing to unveil */
 }
 
 .statement {
-  position: relative;
-  z-index: 1; /* above the curtain panels */
   display: flex;
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: clamp(1rem, 3vw, 3.5rem);
+  gap: clamp(0.75rem, 3vw, 3.5rem);
+  margin: 0;
   font-size: clamp(2.25rem, 5.7vw, 8.5rem);
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.01em;
-  color: var(--ev-ink);
   text-align: center;
-  margin: 0;
+  color: var(--dark);
 }
 
 .photoMask {
-  position: relative; /* both photo frames stack absolutely inside */
+  position: relative;
   display: block;
   flex: none;
-  width: clamp(8rem, 15vw, 18.5rem);
+  width: clamp(2.75rem, 12vw, 18.5rem);
   aspect-ratio: 1;
-  overflow: hidden; /* the photo reveals from inside this mask */
+  overflow: hidden;
   border-radius: var(--radius);
 }
 
+/* Both frames are absolutely positioned at identical size, so the opacity
+   crossfade between them cannot shift a single pixel of layout. */
 .photo {
   position: absolute;
   inset: 0;
@@ -445,75 +98,56 @@
   object-fit: cover;
 }
 
-/* The smiling frame sits on top of the main one, hidden until the swap. JS
-   flips its opacity to 1 — instant, because it is already in the DOM and
-   decoded, so no re-decode flash like a src swap would cause. */
 .photoSmiling {
   opacity: 0;
 }
 
-/* Phone: the photo window's desktop floor is 8rem (128px), which on a 390px
-   screen is ~3.5x the 36px statement type — it dwarfs the words "This … is
-   Evan…" and dominates the animation. Shrink it to read as an inline photo
-   token, roughly 1.3x the cap height. The intro measures this element's CSS
-   width and opens the mask to it, so this size flows straight through the
-   reveal. */
-@media (max-width: 700px) {
-  .photoMask {
-    width: clamp(2.75rem, 12vw, 4.5rem);
-  }
+.beatImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius);
 }
 
-/* ── phone finale extras: the live-pledge image + the campaign CTA, on the
-   last step only (rendered on phones, see evan-section.tsx). They start
-   hidden and are swept up by the engine (paintStep's finale branch) as you
-   scroll PAST the headline; with no JS they show statically via the
-   :not(.isLive) rule below. ─────────────────────────────────────────────── */
-.section [data-ev-extra] {
-  opacity: 0;
-  /* NO will-change. These animate once, for under 0.6s, and a standing
-     promise gives each its own compositor layer + backing texture for the
-     life of the page — alongside a live WebGL context. CSS transitions and
-     animations on transform/opacity are promoted for their duration anyway,
-     which is the behaviour actually wanted here. */
+.headline {
+  margin: 0 0 clamp(0.5rem, 1.4vw, 1.125rem);
+  font-size: clamp(2rem, 4vw, 4rem);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  color: var(--ev-ink-strong);
+  max-width: 14ch;
 }
 
-/* pledge = three notification cards (pledge.png) stacked on top of each other,
-   the back two fanned out, the front one straight. paintStep reveals the
-   container and flips data-in; the cards then fade + bounce in, back-to-front,
-   like notifications piling up. */
+.copyBody {
+  margin: 0;
+  font-size: clamp(1.0625rem, 1.6vw, 1.75rem);
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--ev-ink);
+  max-width: 44ch;
+}
+
 .pledgeStack {
   position: relative;
   display: block;
-  width: min(80%, calc(23 * var(--u)));
+  width: min(80%, 22rem);
   aspect-ratio: 316 / 143;
-  /* its own scroll beat, but NOT so far that the finale title is pushed up
-     behind the fixed navbar when the pledge is on the reading line (measured:
-     at 30vh the title landed at y≈34–69, i.e. under the nav — which is why
-     "the last one's text isn't even visible"). */
-  margin: 20vh auto 0;
-}
-
-/* the stack container is shown once revealed (onceInView sets data-in); its
-   cards run their own fade+bounce. Base [data-ev-extra] keeps it hidden until. */
-.pledgeStack[data-in="1"] {
-  opacity: 1;
+  margin: 0 auto;
 }
 
 .pledgeCard {
+  --rot: 0deg;
+  --pop: 0;
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
-  opacity: 0; /* each card fades in via pledgePop */
-  --rot: 0deg;
-  transform: rotate(var(--rot));
-  transform-origin: center bottom;
-  /* no will-change — see [data-ev-extra] above */
+  transform: rotate(var(--rot)) translateY(calc(var(--pop) * 28%))
+    scale(calc(1 - var(--pop) * 0.16));
 }
 
-/* front card (last in the DOM) sits on top, straight; the other two fan */
 .pledgeCard[data-pledge="2"] {
   --rot: -6deg;
 }
@@ -522,159 +156,281 @@
   --rot: 5deg;
 }
 
-@keyframes pledgePop {
-  0% {
-    opacity: 0;
-    transform: translateY(40%) scale(0.8) rotate(var(--rot));
-  }
-  62% {
-    opacity: 1;
-    transform: translateY(-8%) scale(1.04) rotate(var(--rot));
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1) rotate(var(--rot));
-  }
-}
-
-.pledgeStack[data-in="1"] .pledgeCard {
-  animation: pledgePop 0.42s var(--ev-ease) both;
-}
-
-.pledgeStack[data-in="1"] .pledgeCard[data-pledge="1"] {
-  animation-delay: 0.07s;
-}
-
-.pledgeStack[data-in="1"] .pledgeCard[data-pledge="0"] {
-  animation-delay: 0.14s;
-}
-
 .cta {
   display: block;
-  /* SAME screen as the pledge stack — the two are one closing beat, so the
-     button sits just under the cards, not a screenful away */
-  margin-top: 7vh;
-  padding: calc(1.05 * var(--u));
+  width: fit-content;
+  min-width: 16rem;
+  margin: clamp(2rem, 5vw, 3.5rem) auto 0;
+  padding: 0.9em 2.2em;
   background: var(--white);
   color: #001407;
   border-radius: var(--radius);
   font-weight: 900;
-  font-size: calc(1.25 * var(--u));
+  font-size: clamp(1.0625rem, 1.35vw, 1.5rem);
   text-align: center;
   text-decoration: none;
-  /* revealed by onceInView (data-in); slides up from the base state */
-  transform: translateY(22px);
-  transition:
-    opacity 0.4s var(--ev-ease),
-    transform 0.4s var(--ev-ease);
 }
 
-.cta[data-in="1"] {
+/* Decorative in flow — the scroll bar has nothing to report without scroll. */
+.progress {
+  display: none;
+}
+
+/* ── the enhancement: a sticky stage inside a tall track ───────────────── */
+
+.section[data-enhanced="true"] .track {
+  /* One stage, plus one span of travel per transition. The usable progress
+     distance is therefore exactly `--scene-steps × --scene-span`, which is
+     what trackProgress() divides by. */
+  min-height: calc(100svh + var(--scene-steps) * var(--scene-span));
+}
+
+.section[data-enhanced="true"] .stage {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  min-height: 100svh;
+  overflow: clip; /* NOT hidden — clip creates no scroll container */
+}
+
+.section[data-enhanced="true"] .scene {
+  position: absolute;
+  inset: 0;
+  padding: calc(var(--nav) + clamp(1rem, 3vh, 2.5rem)) clamp(1.25rem, 5vw, 4rem)
+    clamp(4.5rem, 9vh, 7rem);
+  /* The controller owns these three; the values here are only the state
+     before its first paint (which runs in a layout effect, i.e. before the
+     browser paints at all). */
   opacity: 1;
-  transform: translateY(0);
-  /* revealed by the same trigger as the pledge stack (one closing screen);
-     the delay makes it follow the cards' pop instead of racing them */
-  transition-delay: 0.3s;
+  visibility: hidden;
+  pointer-events: none;
 }
 
-/* Desktop: the closing screen is a real EXTRA scroll (owner) — the stack
-   sits a full beat below the last text instead of sharing its screen — and
-   the CTA is a compact centred button: at full column width the hover kit's
-   1.3x grow ran it off screen. */
-@media (min-width: 701px) {
-  .pledgeStack {
-    margin-top: 55vh;
+/* The statement paints above the beats in BOTH directions of travel: coming
+   back up, the curtain has to fall over scene 1, not behind it. */
+.section[data-enhanced="true"] .scene[data-scene-kind="statement"] {
+  z-index: 3;
+  background: transparent; /* the curtain panels carry the white now */
+}
+
+.section[data-enhanced="true"] .scene[data-scene-kind="finale"] {
+  z-index: 2;
+}
+
+.section[data-enhanced="true"] .curtain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.curtainPanel {
+  flex: 1 1 auto;
+  background: var(--white);
+}
+
+.curtainPanel + .curtainPanel {
+  margin-left: -1px; /* 1px overlap — no subpixel hairline between panels */
+}
+
+.section[data-enhanced="true"] .statementCopy {
+  position: relative;
+  z-index: 1; /* over the curtain it is printed on */
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
+/* Beats: media and copy side by side on a laptop, stacked on a phone. */
+.section[data-enhanced="true"] .sceneBeat {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  max-width: 90rem;
+  margin-inline: auto;
+}
+
+.beatMedia {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+}
+
+.section[data-enhanced="true"] .beatImg {
+  max-height: min(62vh, 40rem);
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.section[data-enhanced="true"] .beatCopy {
+  min-width: 0;
+}
+
+.section[data-enhanced="true"] .sceneFinale {
+  display: grid;
+  place-items: center;
+}
+
+.section[data-enhanced="true"] .finaleCopy {
+  width: min(100%, 34rem);
+}
+
+/* Bottom of the STAGE, not of the viewport: it arrives and leaves with the
+   sticky stage, so it never needs to be told which section owns the screen. */
+.section[data-enhanced="true"] .progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  gap: 0.5vw;
+  padding: clamp(1rem, 2vh, 1.5rem) clamp(1.25rem, 3vw, 2.5rem);
+  background: var(--ev-bg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tick {
+  --tf: 0;
+  position: relative;
+  flex: 1;
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: 0; /* dead square — even --radius reads as too round here */
+  background: color-mix(in srgb, var(--brand) 22%, transparent);
+}
+
+.tick::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--brand);
+  transform: scaleX(var(--tf));
+  transform-origin: left;
+}
+
+/* ── phone ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .section {
+    --ev-bg: #001407;
+    /* Shorter beats: a thumb covers less ground per flick, and a 88svh beat
+       reads as a long way between two sentences. */
+    --scene-span: 76svh;
+  }
+
+  .headline {
+    font-size: clamp(1.75rem, 8.5vw, 2.5rem);
+  }
+
+  .copyBody {
+    font-size: clamp(1rem, 4.2vw, 1.25rem);
+  }
+
+  .statement {
+    font-size: clamp(2rem, 9.5vw, 3rem);
+    gap: clamp(0.5rem, 3vw, 1rem);
+  }
+
+  /* Single column, and the image is capped so the picture AND the headline
+     both clear a short viewport — the two things that must stay on screen
+     together. Tested against 390×667 as well as 390×844. */
+  .section[data-enhanced="true"] .sceneBeat {
+    grid-template-columns: 1fr;
+    align-content: center;
+    gap: clamp(1.25rem, 4vh, 2.25rem);
+  }
+
+  .section[data-enhanced="true"] .beatImg {
+    max-height: 38vh;
+  }
+
+  .section[data-enhanced="true"] .scene {
+    padding: calc(var(--nav) + clamp(0.75rem, 2vh, 1.5rem))
+      clamp(1.25rem, 6vw, 2rem) clamp(3.5rem, 8vh, 5rem);
+  }
+
+  .headline,
+  .copyBody {
+    max-width: none;
   }
 
   .cta {
-    width: fit-content;
-    min-width: calc(16 * var(--u));
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: calc(2.2 * var(--u));
-    padding-right: calc(2.2 * var(--u));
+    width: 100%;
+    min-width: 0;
   }
 }
 
-.section:not(.isLive) [data-ev-extra],
-.section:not(.isLive) .pledgeCard {
-  opacity: 1; /* no JS: the finale stands assembled, cards shown */
-}
-
-/* ── phone-only chrome. The segmented bottom bar, the missing counter and the
-   bare (no mint fill) peel are the BASE treatment on every posture now — what
-   stays here is the finale geometry. ─────────────────────────────────────── */
-@media (max-width: 700px) {
-  /* the finale (last) step: title, then ONE closing screen (pledge stack +
-     CTA together), then a short DWELL. This revises the old sliver ("this
-     should be the end of the section") — the owner now wants "a bit of
-     scrolling after the pledges and button so the user has the chance to see
-     them then scroll". 28vh here + `.walk`'s 8vh = 36vh of surface below the
-     CTA. The magnet rests the stack's TOP on the reading line, so that
-     leaves ~199px (at 390x812) to scroll before #creators' top reaches the
-     fold, and when it does the CTA's BOTTOM sits at exactly (100 - 36)vh.
-     Do NOT push the total past ~39vh: beyond that, on a 667-tall phone, the
-     CTA rises under the retired `.mediaGroup` — which is opacity 0 but still
-     hit-tests unless the engine also kills its pointer-events — and the
-     phone seam jack (`best = #creators.top`) grows 1:1 with every vh added
-     while its glide stays pinned at 460ms.
-     The runway lives HERE, not on `.walk`: this padding is INSIDE `.walk`'s
-     content box, which is the sticky constraint rect for `.mediaGroup`, so
-     it extends the stamp's pinned range instead of shortening it — and this
-     block is phone-only, while `.walk`'s is ≤900px. It moves no anchor
-     (every title sits above it), so relStep/halfUp/halfDown and the
-     one-step-legible proof are untouched. */
-  .step:last-child {
-    min-height: auto;
-    padding-bottom: 28vh;
-  }
-}
-
-/* no JS: show the (static) progress bar rather than leaving it invisible */
-.section:not(.isLive) .mediaCap {
-  opacity: 1;
-}
-
-.section:not(.isLive) .statementWrap {
-  display: none; /* no JS: the story stands on its own */
-}
-
-.section:not(.isLive) .scene[data-i="0"] {
-  opacity: 1;
-}
-
-/* ── reduced motion: static, fully-assembled states; instant page flips.
-   Every rule here has to out-rank the inline styles the story engine writes
-   (its rAF loop paints transforms/opacity straight onto the nodes), so
-   !important is the only weight that wins — biome-ignore, deliberate. */
+/* ── reduced motion ────────────────────────────────────────────────────────
+   The controller never enhances under this preference, so the base flow above
+   is already what these visitors get. This block is the belt: if the
+   attribute is ever set by some path we haven't thought of, the sticky
+   presentation still does not engage, and no scene can be left transformed or
+   transparent. A static, complete, readable story — not a faster animated
+   one. */
 
 @media (prefers-reduced-motion: reduce) {
-  .section *,
-  .section *::before,
-  .section *::after {
-    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
-    transition: none !important;
-    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
-    animation: none !important;
+  .section[data-enhanced="true"] .track {
+    min-height: 0;
   }
 
-  .section .w > span,
-  .section .copyBody,
-  .section [data-ev-extra],
-  .section .pledgeCard {
-    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
+  .section[data-enhanced="true"] .stage {
+    position: static;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .section[data-enhanced="true"] .scene {
+    position: static;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the inline
+       styles the controller writes per frame */
+    opacity: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: as above */
+    visibility: visible !important;
+    /* biome-ignore lint/complexity/noImportantStyles: as above */
     transform: none !important;
+    pointer-events: auto;
+  }
+
+  .section[data-enhanced="true"] .scene[data-scene-kind="statement"] {
+    background: var(--white);
+  }
+
+  .section[data-enhanced="true"] .sceneBeat {
+    grid-template-columns: 1fr;
+  }
+
+  .section[data-enhanced="true"] .curtain,
+  .section[data-enhanced="true"] .progress {
+    display: none;
+  }
+
+  .section[data-enhanced="true"] .statementCopy,
+  .section[data-enhanced="true"] .beatCopy,
+  .section[data-enhanced="true"] .beatMedia,
+  .section[data-enhanced="true"] .finaleCopy {
     /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     opacity: 1 !important;
-  }
-
-  .section .scene {
     /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
     transform: none !important;
   }
 
-  .statementWrap {
+  /* The photo swap hides information at rest under this preference — pin the
+     neutral frame and drop the overlay entirely. */
+  .photoSmiling {
     /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
-    display: none !important; /* land directly on the story */
+    opacity: 0 !important;
+  }
+
+  .pledgeCard {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
+    opacity: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must beat inline styles */
+    transform: rotate(var(--rot)) !important;
   }
 }

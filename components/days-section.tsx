@@ -71,14 +71,9 @@ export function DaysSection() {
         // "the calendar section transition make it faster").
         releaseHold = holdScroll(1000, root, () => {
           if (cancelled) return;
-          // The navbar re-evaluates only on `scroll`, and a pinned body
-          // emits none — so its clear-over-#days state used to wait for the
-          // hold's RELEASE, seconds after the section owned the screen ("the
-          // nav bar takes a bit to go away"). Poke its listener the moment
-          // the glide lands: rects under a pin reflect the virtual position,
-          // so it computes the right answer now, and the 0.3s background
-          // fade finishes well inside the grow.
-          window.dispatchEvent(new Event("scroll"));
+          // (The synthetic `scroll` event that used to live here is gone with
+          // the body pin: nothing freezes the page any more, so the navbar's
+          // own passive listener is already seeing real scroll events.)
           try {
             const grow = cover.animate(
               [{ clipPath: HOLE_SMALL }, { clipPath: HOLE_FULL }],
