@@ -207,12 +207,29 @@ export function holdScroll(
   let lockedY = 0; // the virtual scroll while pinned; body.top === -lockedY
   let raf = 0;
   let timer = 0;
+  let waitRaf = 0;
+  let cancelled = false;
+
+  // A pinned body emits NO scroll events — the document's own scroll really
+  // is frozen — so every passive `scroll` listener on the page goes blind
+  // for the whole hold and snaps to a new state on release. That is what the
+  // navbar's transparent-over-#days flip and its show/hide line were doing
+  // ("the nav bar glitches", "takes a bit to go away"). Every such listener
+  // in this repo reads position through rects or the -body.top convention,
+  // both of which are correct mid-hold, so they just need to be TOLD. One
+  // synthetic event per glide frame keeps them exactly in step.
+  const poke = () => {
+    window.dispatchEvent(new Event("scroll"));
+  };
 
   const release = () => {
     if (raf) cancelAnimationFrame(raf);
     if (timer) clearTimeout(timer);
+    if (waitRaf) cancelAnimationFrame(waitRaf);
     raf = 0;
     timer = 0;
+    waitRaf = 0;
+    cancelled = true;
     if (!held) return;
     held = false;
     const b = document.body.style;
@@ -231,11 +248,33 @@ export function holdScroll(
     onSettled?.();
   };
 
-  // someone else already owns the page (the Evan statement's own hold, or a
+  // Someone else already owns the page (the Evan statement's own hold, or a
   // neighbouring section's): stacking a second pin would read scrollY as 0
-  // and restore the document top on release. Stand down — but the entrance
-  // still gets its cue, or a one-off collision would cost it its opening.
-  if (document.body.style.position !== "fixed") {
+  // and restore the document top on release, so stand down. The entrance
+  // still gets its cue — a one-off collision must not cost a section its
+  // opening — but it must WAIT for the page to be free first.
+  //
+  // Firing it immediately was a real bug, and a vicious one on phone: the
+  // other section's glide is still moving `body.top`, which moves every
+  // rect, which trips THIS section's IntersectionObserver a full viewport
+  // early. Its entrance then played off-screen, mid-flight, and by the time
+  // the reader arrived it was over — with the page lurching under them the
+  // whole way ("the sections on the phone glitch so bad"). Phone hides it
+  // worse because its triggers sit deeper, so the glides are longer.
+  if (document.body.style.position === "fixed") {
+    const waitFree = () => {
+      if (cancelled) return;
+      if (document.body.style.position === "fixed") {
+        waitRaf = requestAnimationFrame(waitFree);
+        return;
+      }
+      waitRaf = 0;
+      settled();
+    };
+    waitRaf = requestAnimationFrame(waitFree);
+    return release;
+  }
+  {
     held = true;
     lockedY = window.scrollY;
     // measured BEFORE the pin, though pinning moves nothing: body.top exactly
@@ -260,6 +299,7 @@ export function holdScroll(
         const t = Math.min(1, (now - t0) / dur);
         lockedY = y0 + gap * easeFn.out2(t);
         document.body.style.top = `${-lockedY}px`;
+        poke(); // keep every scroll listener in step with the virtual scroll
         if (t < 1) {
           raf = requestAnimationFrame(step);
           return;

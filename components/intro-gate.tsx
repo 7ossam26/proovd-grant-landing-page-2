@@ -82,11 +82,19 @@ const CLIP = {
 const PHONE_QUERY = "(max-width: 700px)";
 
 /** The pre-choice loader (owner: "a simple text animation 0 to 100% loader
- *  before the buttons and add this ontop of it in a loop"): a fixed-duration
- *  0→100% count — decorative, nothing real is measured — with crank-load.mp4
- *  (~750 KB) looping above the number. Skipped under reduced motion. */
+ *  before the buttons and add this ontop of it in a loop", then "the loader
+ *  should not be finished before everything else is loaded"): the count
+ *  climbs to 90% over LOAD_MIN_MS, HOLDS there until the page's assets are
+ *  actually in — window `load`, the crank clip's first frame, the stinger's
+ *  buffer — then runs to 100. The first live deploy proved why: a fixed
+ *  1.8s count outran the crank's own 768 KB fetch, so the clip never
+ *  painted before the tiles arrived ("the loading crank video doesn't show
+ *  up"). Everything is raced against LOAD_MAX_MS, so a dead asset costs the
+ *  cap at worst, never the gate. Skipped under reduced motion. */
 const CRANK_SRC = "/assets/crank-load.mp4";
-const LOAD_MS = 1800; // the count itself
+const LOAD_MIN_MS = 1500; // the 0→90 climb (also the floor on a warm cache)
+const LOAD_DONE_MS = 320; // the 90→100 run once the assets are in
+const LOAD_MAX_MS = 8000; // no asset may hold the tiles longer than this
 const LOAD_TAIL = 250; // beat of rest at 100% before the tiles come up
 
 /** HTMLMediaElement.HAVE_ENOUGH_DATA, spelled out so no environment has to
@@ -403,17 +411,20 @@ export function IntroGate() {
       }
     }
 
-    // ── the pre-choice loader. A fixed 0→100% count (decorative — nothing
-    // real is being measured) with the crank clip looping on top; the tiles
-    // take the stage when it lands. Reduced motion skips straight to the
-    // tiles: a forced wait behind a counter plus an autoplaying clip is
-    // exactly what that preference asked not to get. The crank is gated like
-    // the stinger (Save-Data, the tablet cover, codec support), but its
-    // absence only hides the clip — the count runs regardless.
+    // ── the pre-choice loader. The count is REAL now (see the consts): it
+    // climbs to 90 over LOAD_MIN_MS, holds until the page's assets are in,
+    // then runs to 100 and the tiles take the stage. Reduced motion skips
+    // straight to the tiles: a forced wait behind a counter plus an
+    // autoplaying clip is exactly what that preference asked not to get. The
+    // crank is gated like the stinger (Save-Data, the tablet cover, codec
+    // support), but its absence only hides the clip — the count runs
+    // regardless.
     const crank = crankRef.current;
     const count = countRef.current;
     let loadRaf = 0;
     let crankOn = false;
+    let crankSeen: (() => void) | undefined;
+    let clipSeen: (() => void) | undefined;
     const hideCrank = () => {
       if (crank) crank.style.display = "none";
     };
@@ -431,6 +442,18 @@ export function IntroGate() {
     if (reduced) {
       go("choosing");
     } else {
+      // What "everything else" means, concretely. Each wait resolves on its
+      // own failure path too — this list may only ever DELAY the tiles,
+      // never hold them hostage (and the LOAD_MAX_MS race caps even that).
+      const waits: Promise<unknown>[] = [];
+      // 1 — the page's own subresources: stylesheets, eager images, fonts.
+      if (document.readyState !== "complete") {
+        waits.push(
+          new Promise((resolve) => {
+            window.addEventListener("load", resolve, { once: true });
+          }),
+        );
+      }
       if (
         crank &&
         typeof crank.play === "function" &&
@@ -438,6 +461,22 @@ export function IntroGate() {
         !window.matchMedia(TABLET_QUERY).matches &&
         canPlayMp4()
       ) {
+        // 2 — the crank's first frame, so the clip is actually VISIBLE
+        // before the count can finish.
+        waits.push(
+          new Promise<void>((resolve) => {
+            crankSeen = () => {
+              crankSeen = undefined;
+              resolve();
+            };
+            crank.addEventListener("loadeddata", () => crankSeen?.(), {
+              once: true,
+            });
+            crank.addEventListener("error", () => crankSeen?.(), {
+              once: true,
+            });
+          }),
+        );
         crank.defaultMuted = true;
         crank.muted = true;
         crank.addEventListener("error", hideCrank);
@@ -451,24 +490,72 @@ export function IntroGate() {
           Promise.resolve(crank.play()).catch(hideCrank);
         } catch {
           hideCrank();
+          crankSeen?.();
         }
       } else {
         hideCrank(); // the count carries the loader alone
       }
+      // 3 — the stinger's buffer, when one is armed (its fetch started
+      // above): the pick lands on a clip that can play through.
+      if (allowClip && video) {
+        waits.push(
+          new Promise<void>((resolve) => {
+            if (video.readyState >= BUFFERED || video.error) {
+              resolve();
+              return;
+            }
+            clipSeen = () => {
+              clipSeen = undefined;
+              resolve();
+            };
+            video.addEventListener("canplaythrough", () => clipSeen?.(), {
+              once: true,
+            });
+            video.addEventListener("error", () => clipSeen?.(), {
+              once: true,
+            });
+          }),
+        );
+      }
+      let assetsIn = false;
+      Promise.race([
+        Promise.all(waits),
+        new Promise((resolve) => after(LOAD_MAX_MS, () => resolve(null))),
+      ]).then(() => {
+        assetsIn = true;
+      });
       const t0 = performance.now();
+      let finFrom = -1; // the value the 90→100 run started from…
+      let finAt = 0; // …and when it started
       const step = (now: number) => {
         if (!alive || phaseRef.current !== "loading") return;
-        const p = Math.min(1, (now - t0) / LOAD_MS);
-        if (count) count.textContent = `${Math.round(p * 100)}%`;
-        if (p < 1) loadRaf = requestAnimationFrame(step);
-        else after(LOAD_TAIL, beginChoosing);
+        let v: number;
+        if (finFrom < 0) {
+          v = 90 * Math.min(1, (now - t0) / LOAD_MIN_MS);
+          // A warm cache resolves the waits instantly — the floor keeps the
+          // count from flashing 0→100 in a blink and reading as broken.
+          if (assetsIn && now - t0 >= LOAD_MIN_MS * 0.45) {
+            finFrom = v;
+            finAt = now;
+          }
+        } else {
+          v =
+            finFrom +
+            (100 - finFrom) * Math.min(1, (now - finAt) / LOAD_DONE_MS);
+        }
+        if (count) count.textContent = `${Math.round(v)}%`;
+        if (v >= 99.5) {
+          after(LOAD_TAIL, beginChoosing);
+          return;
+        }
+        loadRaf = requestAnimationFrame(step);
       };
       loadRaf = requestAnimationFrame(step);
       // rAF is suspended in a hidden tab; this timer backstop still fires, so
       // the gate can never sit at "loading" forever. after() timers are
       // cleared by the dismissal teardown, and go() only moves forward, so
       // neither path can drag a dismissed gate back.
-      after(LOAD_MS + LOAD_TAIL + 800, beginChoosing);
+      after(LOAD_MAX_MS + 1500, beginChoosing);
     }
 
     // ── THE one exit. Every success and every failure funnels through here.
@@ -677,6 +764,10 @@ export function IntroGate() {
       if (exitTimer !== undefined) window.clearTimeout(exitTimer);
       cropRO?.disconnect();
       detachVideo();
+      // neuter the loader's once-listeners; their promises just never
+      // resolve, which is fine — nobody is waiting after unmount
+      crankSeen = undefined;
+      clipSeen = undefined;
       crank?.removeEventListener("error", hideCrank);
       if (started && video) {
         try {
