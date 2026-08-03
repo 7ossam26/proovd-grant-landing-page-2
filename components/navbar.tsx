@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { EASE, playFrom, playTo, VSCROLL_EVENT } from "@/lib/motion";
+import { EASE, playFrom, playTo } from "@/lib/motion";
 import { siteConfig } from "@/lib/site-config";
 import styles from "./navbar.module.css";
 
@@ -249,11 +249,6 @@ export function Navbar() {
     }
     onScrollFrame(); // settle both states for wherever the page loaded
     window.addEventListener("scroll", onScroll, { passive: true });
-    // A pinned body emits no real scroll events, so the bar used to freeze
-    // through every arrival hold and snap on release. The glides announce
-    // the virtual position on this private channel (lib/motion.ts) — only
-    // this bar subscribes, so no other scroll reader can be startled by it.
-    window.addEventListener(VSCROLL_EVENT, onScroll);
     // Resize moves the #days boundary without a scroll event (ScrollTrigger
     // used to refresh itself here) — re-evaluate so navClear can't go stale.
     window.addEventListener("resize", onScroll);
@@ -261,7 +256,6 @@ export function Navbar() {
     return () => {
       killFlight();
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener(VSCROLL_EVENT, onScroll);
       window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);
       for (const a of anims) a.cancel();
